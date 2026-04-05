@@ -47,11 +47,27 @@ document.querySelectorAll('.market-card, .adv-card, .step-card, .compare__bottom
   observer.observe(el);
 });
 
-// CTA form
+// CTA form — отправка в WhatsApp
 const form = document.getElementById('ctaForm');
 if (form) {
   form.addEventListener('submit', (e) => {
     e.preventDefault();
+    const inputs = form.querySelectorAll('input');
+    const name = inputs[0].value.trim();
+    const phone = inputs[1].value.trim();
+    const car = inputs[2].value.trim();
+
+    const text = [
+      '🚗 *Новая заявка с сайта Easy Auto Import*',
+      '',
+      `👤 Имя: ${name}`,
+      `📞 Телефон: ${phone}`,
+      car ? `🔍 Авто: ${car}` : '',
+    ].filter(Boolean).join('\n');
+
+    const url = `https://wa.me/77476899519?text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank');
+
     const btn = form.querySelector('button[type="submit"]');
     const original = btn.textContent;
     btn.textContent = '✅ Заявка отправлена!';
