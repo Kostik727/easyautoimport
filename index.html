@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=4">
+  <link rel="stylesheet" href="style.css?v=5">
 </head>
 <body>
 
@@ -34,6 +34,7 @@
       </a>
       <ul class="nav__links">
         <li><a href="#price-anchor">Сколько сэкономить</a></li>
+        <li><a href="#calculator">Калькулятор</a></li>
         <li><a href="#compare">США vs Корея</a></li>
         <li><a href="#steps">Как работаем</a></li>
       </ul>
@@ -106,6 +107,103 @@
             <div class="hero__slots-fill"></div>
           </div>
           <p>Свободно <strong>7 из 20</strong> мест в апреле — берём не всех</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CALCULATOR -->
+  <section class="calc" id="calculator">
+    <div class="calc__wrap">
+      <div class="section-top">
+        <span class="section-label">Калькулятор</span>
+        <h2>Сколько ты сэкономишь?</h2>
+        <p>Выбери авто или введи цену дилера — покажем реальную выгоду</p>
+      </div>
+
+      <div class="calc__body">
+        <div class="calc__left">
+          <div class="calc__tabs">
+            <button class="calc__tab calc__tab--active" data-tab="model">Выбрать модель</button>
+            <button class="calc__tab" data-tab="manual">Ввести цену</button>
+          </div>
+
+          <!-- Tab: выбор модели -->
+          <div class="calc__panel" id="tabModel">
+            <div class="calc__field">
+              <label>Марка</label>
+              <select id="calcBrand" class="calc__select">
+                <option value="">— Выберите марку —</option>
+                <option>Toyota</option>
+                <option>Hyundai</option>
+                <option>Kia</option>
+                <option>BMW</option>
+                <option>Mercedes-Benz</option>
+                <option>Audi</option>
+                <option>Lexus</option>
+                <option>Ford</option>
+                <option>Chevrolet</option>
+                <option>Volkswagen</option>
+              </select>
+            </div>
+            <div class="calc__field">
+              <label>Модель</label>
+              <select id="calcModel" class="calc__select" disabled>
+                <option value="">— Сначала выберите марку —</option>
+              </select>
+            </div>
+            <div class="calc__field">
+              <label>Год</label>
+              <select id="calcYear" class="calc__select" disabled>
+                <option value="">— Сначала выберите модель —</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Tab: своя цена -->
+          <div class="calc__panel calc__panel--hidden" id="tabManual">
+            <div class="calc__field">
+              <label>Цена у казахстанского дилера (₸)</label>
+              <input type="number" id="calcManualPrice" class="calc__input-num" placeholder="Например: 25 000 000" min="1000000" step="100000">
+            </div>
+            <p class="calc__hint">Укажите цену которую вы видели в автосалоне или на сайте дилера</p>
+          </div>
+        </div>
+
+        <!-- Results -->
+        <div class="calc__right">
+          <div class="calc__result" id="calcResult">
+            <div class="calc__result-placeholder">
+              <div class="calc__result-icon">🚗</div>
+              <p>Выберите автомобиль или введите цену дилера — и мы покажем вашу экономию</p>
+            </div>
+            <div class="calc__result-data" id="calcData" style="display:none">
+              <div class="calc__result-car" id="calcCarName"></div>
+              <div class="calc__prices">
+                <div class="calc__price-row">
+                  <span>Цена у дилера в РК</span>
+                  <strong class="calc__price--old" id="calcDealerPrice"></strong>
+                </div>
+                <div class="calc__price-row calc__price-row--main">
+                  <span>Наша цена (с доставкой и таможней)</span>
+                  <strong class="calc__price--new" id="calcOurPrice"></strong>
+                </div>
+                <div class="calc__divider"></div>
+                <div class="calc__price-row calc__price-row--saving">
+                  <span>💰 Ваша экономия</span>
+                  <strong id="calcSaving"></strong>
+                </div>
+                <div class="calc__price-row calc__price-row--deposit">
+                  <span>Первый взнос (40%)</span>
+                  <strong id="calcDeposit"></strong>
+                </div>
+              </div>
+              <a href="#" class="btn btn--orange calc__result-btn" id="calcWhatsapp">
+                Хочу эту машину — обсудить в WhatsApp →
+              </a>
+              <p class="calc__disclaimer">* Расчёт приблизительный. Точная цена зависит от лота, курса и таможни. Менеджер уточнит детали.</p>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -398,6 +496,6 @@
     </div>
   </footer>
 
-  <script src="script.js?v=3"></script>
+  <script src="script.js?v=4"></script>
 </body>
 </html>
