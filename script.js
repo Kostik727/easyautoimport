@@ -1,53 +1,66 @@
-// Burger menu
+// Nav burger
 const burger = document.getElementById('burger');
 const navLinks = document.querySelector('.nav__links');
-const navBtn = document.querySelector('.nav__btn');
-
-if (burger) {
+if (burger && navLinks) {
   burger.addEventListener('click', () => {
-    const isOpen = navLinks.style.display === 'flex';
-    navLinks.style.display = isOpen ? 'none' : 'flex';
-    navLinks.style.flexDirection = 'column';
-    navLinks.style.position = 'absolute';
-    navLinks.style.top = '68px';
-    navLinks.style.left = '0';
-    navLinks.style.right = '0';
-    navLinks.style.background = 'rgba(5,7,11,0.97)';
-    navLinks.style.padding = '16px 24px 20px';
-    navLinks.style.borderBottom = '1px solid rgba(255,255,255,0.08)';
-    burger.classList.toggle('open', !isOpen);
+    const isOpen = navLinks.classList.contains('nav__links--open');
+    navLinks.classList.toggle('nav__links--open', !isOpen);
+    if (!isOpen) {
+      navLinks.style.cssText = 'display:flex;flex-direction:column;position:absolute;top:64px;left:0;right:0;background:rgba(8,10,15,0.98);padding:16px 24px 20px;border-bottom:1px solid rgba(255,255,255,0.07);gap:4px;';
+    } else {
+      navLinks.style.display = '';
+    }
   });
 }
 
-// Scroll-based nav opacity
+// Nav scroll opacity
 const nav = document.querySelector('.nav');
 window.addEventListener('scroll', () => {
-  if (window.scrollY > 40) {
-    nav.style.background = 'rgba(5,7,11,0.97)';
-  } else {
-    nav.style.background = 'rgba(5,7,11,0.8)';
-  }
+  nav.style.background = window.scrollY > 40
+    ? 'rgba(8,10,15,0.98)'
+    : 'rgba(8,10,15,0.85)';
 });
 
-// Animate on scroll
-const observer = new IntersectionObserver((entries) => {
+// Animated counters
+const counters = document.querySelectorAll('.pain-stat__num');
+const counterObserver = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (!entry.isIntersecting) return;
+    const el = entry.target;
+    const target = parseInt(el.dataset.target);
+    const duration = 1500;
+    const start = performance.now();
+    const update = (now) => {
+      const progress = Math.min((now - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      el.textContent = Math.round(eased * target);
+      if (progress < 1) requestAnimationFrame(update);
+    };
+    requestAnimationFrame(update);
+    counterObserver.unobserve(el);
+  });
+}, { threshold: 0.5 });
+counters.forEach(el => counterObserver.observe(el));
+
+// Scroll animations
+const animObserver = new IntersectionObserver((entries) => {
   entries.forEach(entry => {
     if (entry.isIntersecting) {
       entry.target.style.opacity = '1';
       entry.target.style.transform = 'translateY(0)';
-      observer.unobserve(entry.target);
+      animObserver.unobserve(entry.target);
     }
   });
-}, { threshold: 0.12 });
+}, { threshold: 0.1 });
 
-document.querySelectorAll('.market-card, .adv-card, .step-card, .compare__bottom').forEach(el => {
+document.querySelectorAll('.market-card, .ins-card, .step-item, .pay-step, .shield-item, .pain-stat').forEach((el, i) => {
   el.style.opacity = '0';
-  el.style.transform = 'translateY(28px)';
-  el.style.transition = 'opacity 0.55s ease, transform 0.55s ease';
-  observer.observe(el);
+  el.style.transform = 'translateY(24px)';
+  el.style.transition = `opacity 0.5s ${i * 0.06}s ease, transform 0.5s ${i * 0.06}s ease`;
+  animObserver.observe(el);
 });
 
-// CTA form — отправка в WhatsApp
+// CTA form — WhatsApp
 const form = document.getElementById('ctaForm');
 if (form) {
   form.addEventListener('submit', (e) => {
@@ -58,23 +71,22 @@ if (form) {
     const car = inputs[2].value.trim();
 
     const text = [
-      '🚗 *Новая заявка с сайта Easy Auto Import*',
+      '🚗 *Новая заявка — Easy Auto Import*',
       '',
       `👤 Имя: ${name}`,
       `📞 Телефон: ${phone}`,
       car ? `🔍 Авто: ${car}` : '',
     ].filter(Boolean).join('\n');
 
-    const url = `https://wa.me/77476899519?text=${encodeURIComponent(text)}`;
-    window.open(url, '_blank');
+    window.open(`https://wa.me/77476899519?text=${encodeURIComponent(text)}`, '_blank');
 
     const btn = form.querySelector('button[type="submit"]');
-    const original = btn.textContent;
-    btn.textContent = '✅ Заявка отправлена!';
+    const orig = btn.innerHTML;
+    btn.innerHTML = '✅ Заявка отправлена!';
     btn.disabled = true;
-    btn.style.background = 'linear-gradient(135deg, #22c55e, #16a34a)';
+    btn.style.background = '#22C55E';
     setTimeout(() => {
-      btn.textContent = original;
+      btn.innerHTML = orig;
       btn.disabled = false;
       btn.style.background = '';
       form.reset();
