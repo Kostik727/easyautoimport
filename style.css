@@ -957,15 +957,17 @@ body {
   .hero__wrap { grid-template-columns: 1fr; }
   .hero__right { max-width: 480px; }
   .hero__bg-text { display: none; }
+  .calc__body { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 900px) {
-  .section-top h2 { font-size: 34px; }
+  .section-top h2 { font-size: 32px; }
+  .section-top p { font-size: 16px; }
   .nav__links, .nav__btn { display: none; }
   .nav__burger { display: flex; }
 
   .compare__grid { flex-direction: column; }
-  .compare__vs { padding: 16px; }
+  .compare__vs { padding: 12px; }
 
   .steps__list { grid-template-columns: 1fr 1fr; }
   .insurance__grid { grid-template-columns: 1fr; }
@@ -979,16 +981,83 @@ body {
 }
 
 @media (max-width: 640px) {
-  .hero { padding: 100px 20px 60px; }
-  .pain { padding: 70px 20px; }
-  .pain__grid { grid-template-columns: 1fr 1fr; }
-  .pain-stat { padding: 28px 20px; }
-  .pain-stat__num { font-size: 52px; }
-  .steps__list { grid-template-columns: 1fr; }
-  .payment__shield { grid-template-columns: 1fr 1fr; }
+  /* NAV */
+  .nav__wrap { padding: 0 16px; }
+
+  /* HERO */
+  .hero { padding: 90px 16px 60px; }
+  .hero__title { font-size: 36px; letter-spacing: -0.01em; }
+  .hero__desc { font-size: 16px; }
   .hero__actions { flex-direction: column; }
-  .hero__actions .btn { width: 100%; text-align: center; }
+  .hero__actions .btn { width: 100%; justify-content: center; }
+  .hero__trust { flex-direction: column; gap: 10px; }
+  .hero__card { padding: 20px; }
+  .hero__card-prices { flex-direction: column; gap: 8px; }
+  .hero__card-arrow { transform: rotate(90deg); text-align: center; }
+  .hero__card-price--old strong { font-size: 14px !important; }
+  .hero__card-price--new strong { font-size: 18px !important; }
+
+  /* TICKER */
+  .ticker__track { gap: 40px; }
+  .ticker__track span { font-size: 12px; }
+
+  /* PAIN */
+  .pain { padding: 60px 16px; }
+  .pain__headline { font-size: 24px; margin-bottom: 40px; }
+  .pain__grid { grid-template-columns: 1fr 1fr; gap: 1px; }
+  .pain-stat { padding: 24px 16px; }
+  .pain-stat__num { font-size: 44px; }
+  .pain-stat__unit { font-size: 24px; }
+  .pain-stat p { font-size: 13px; }
+
+  /* CALCULATOR */
+  .calc { padding: 60px 16px; }
+  .calc__body { gap: 24px; }
+  .calc__tabs { margin-bottom: 20px; }
+  .calc__result { min-height: auto; }
+  .calc__price-row--main { margin: 0 -20px; padding: 12px 20px; }
+  .calc__result-data { padding: 20px; }
+
+  /* VIDEO */
+  .video-section { padding: 60px 16px; }
   .video-section__player { width: 100%; border-radius: 16px; }
 
+  /* COMPARE */
+  .compare { padding: 60px 16px; }
+  .compare__cta { padding: 20px; }
+  .compare__cta p { font-size: 16px; }
+  .market-card { padding: 24px; }
+
+  /* PAYMENT */
+  .payment { padding: 60px 16px; }
+  .pay-step { padding: 28px 20px; }
+  .pay-step__pct { font-size: 48px; }
+  .payment__shield { grid-template-columns: 1fr; gap: 8px; }
+  .shield-item { padding: 12px 16px; font-size: 13px; }
+
+  /* STEPS */
+  .steps { padding: 60px 16px; }
+  .steps__list { grid-template-columns: 1fr; }
+  .step-item { padding: 24px 20px; }
+  .step-item__num { font-size: 36px; }
+
+  /* INSURANCE */
+  .insurance { padding: 60px 16px; }
+  .insurance__grid { grid-template-columns: 1fr; }
+  .ins-card { padding: 28px 22px; }
+
+  /* CTA */
+  .cta { padding: 60px 16px; }
+  .cta__left h2 { font-size: 32px; }
+  .cta__form { padding: 22px; }
+  .btn--large { padding: 16px 24px; font-size: 15px; }
+
+  /* FOOTER */
+  .footer { padding: 28px 16px; }
   .footer__wrap { flex-direction: column; align-items: flex-start; gap: 16px; }
+  .footer__socials { gap: 16px; }
+
+  /* SECTION TOPS */
+  .section-top { margin-bottom: 36px; }
+  .section-top h2 { font-size: 28px; }
 }
