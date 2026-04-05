@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Easy Auto Import — Авто из США и Кореи</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css?v=2">
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav class="nav">
+    <div class="nav__wrap">
+      <a href="#" class="nav__logo">
+        <span class="nav__logo-icon">🚗</span>
+        Easy Auto Import
+      </a>
+      <ul class="nav__links">
+        <li><a href="#compare">Сравнение</a></li>
+        <li><a href="#advantages">Преимущества</a></li>
+        <li><a href="#steps">Как это работает</a></li>
+      </ul>
+      <a href="#cta" class="nav__btn">Получить консультацию</a>
+      <button class="nav__burger" id="burger" aria-label="Меню">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero__glow hero__glow--blue"></div>
+    <div class="hero__glow hero__glow--purple"></div>
+    <div class="hero__wrap">
+      <div class="hero__badge">🌍 Официальный импорт из США и Кореи</div>
+      <h1 class="hero__title">Пригоним авто мечты<br><span>дешевле рынка до 30%</span></h1>
+      <p class="hero__desc">Подбираем, проверяем и доставляем автомобили из США и Кореи. Полное сопровождение сделки — от аукциона до вашего двора.</p>
+      <div class="hero__actions">
+        <a href="#cta" class="btn btn--primary">Подобрать авто</a>
+        <a href="#compare" class="btn btn--ghost">Сравнить направления</a>
+      </div>
+      <div class="hero__stats">
+        <div class="hero__stat">
+          <strong>500+</strong>
+          <span>авто доставлено</span>
+        </div>
+        <div class="hero__stat-divider"></div>
+        <div class="hero__stat">
+          <strong>6 лет</strong>
+          <span>на рынке</span>
+        </div>
+        <div class="hero__stat-divider"></div>
+        <div class="hero__stat">
+          <strong>до 30%</strong>
+          <span>экономия</span>
+        </div>
+        <div class="hero__stat-divider"></div>
+        <div class="hero__stat">
+          <strong>100%</strong>
+          <span>легально</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- VIDEO -->
+  <section class="video-section">
+    <div class="video-section__wrap">
+      <div class="section-top">
+        <span class="section-label">О компании</span>
+        <h2>Узнай больше о нас</h2>
+        <p>Смотри, как мы работаем — от аукциона до передачи ключей</p>
+      </div>
+      <div class="video-section__player">
+        <iframe
+          src="https://www.youtube.com/embed/C6Vqe8zSUYg"
+          title="Easy Auto Import — о компании"
+          frameborder="0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowfullscreen>
+        </iframe>
+      </div>
+    </div>
+  </section>
+
+  <!-- COMPARE -->
+  <section class="compare" id="compare">
+    <div class="compare__wrap">
+      <div class="section-top">
+        <span class="section-label">Выбор направления</span>
+        <h2>США или Корея —<br>откуда выгоднее привезти авто?</h2>
+        <p>Подбираем под ваш бюджет и задачи. Сравните два направления и выберите оптимальный вариант.</p>
+      </div>
+
+      <div class="compare__grid">
+        <!-- USA -->
+        <div class="market-card market-card--usa">
+          <div class="market-card__header">
+            <div class="market-card__flag-wrap market-card__flag-wrap--usa">
+              <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect width="32" height="32" rx="16" fill="#B22234"/>
+                <rect y="4.92" width="32" height="3.08" fill="white"/>
+                <rect y="11.08" width="32" height="3.08" fill="white"/>
+                <rect y="17.23" width="32" height="3.08" fill="white"/>
+                <rect y="23.38" width="32" height="3.69" fill="white"/>
+                <rect width="14" height="16" rx="2" fill="#3C3B6E"/>
+              </svg>
+            </div>
+            <div>
+              <div class="market-card__country">США</div>
+              <div class="market-card__title">Авто из США</div>
+              <div class="market-card__subtitle">Максимальная выгода и выбор</div>
+            </div>
+            <div class="market-card__badge market-card__badge--usa">Выгодно</div>
+          </div>
+
+          <ul class="market-card__list">
+            <li>
+              <span class="market-card__param">Выгода</span>
+              <strong class="market-card__value market-card__value--usa">до 30% дешевле рынка</strong>
+            </li>
+            <li>
+              <span class="market-card__param">Площадки</span>
+              <strong class="market-card__value">Copart / IAAI / Manheim</strong>
+            </li>
+            <li>
+              <span class="market-card__param">Срок доставки</span>
+              <strong class="market-card__value">45–90 дней</strong>
+            </li>
+            <li>
+              <span class="market-card__param">Комплектации</span>
+              <strong class="market-card__value">Часто максимальные</strong>
+            </li>
+            <li>
+              <span class="market-card__param">Состояние</span>
+              <strong class="market-card__value">Возможны повреждения</strong>
+            </li>
+            <li>
+              <span class="market-card__param">Подходит</span>
+              <strong class="market-card__value">Если важна экономия</strong>
+            </li>
+          </ul>
+
+          <div class="market-card__tip market-card__tip--usa">
+            💡 Лучший вариант, если хочешь сэкономить и получить максимально выгодную цену.
+          </div>
+
+          <a href="#cta" class="market-card__btn market-card__btn--usa">Подобрать авто из США →</a>
+        </div>
+
+        <!-- KOREA -->
+        <div class="market-card market-card--korea">
+          <div class="market-card__header">
+            <div class="market-card__flag-wrap market-card__flag-wrap--korea">
+              <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect width="32" height="32" rx="16" fill="white"/>
+                <circle cx="16" cy="16" r="7" fill="#C60C30"/>
+                <path d="M16 9 Q20 13 16 16 Q12 19 16 23" stroke="#003478" stroke-width="2" fill="none"/>
+                <path d="M16 9 Q12 13 16 16 Q20 19 16 23" stroke="#C60C30" stroke-width="2" fill="none" opacity="0.5"/>
+              </svg>
+            </div>
+            <div>
+              <div class="market-card__country">Корея</div>
+              <div class="market-card__title">Авто из Кореи</div>
+              <div class="market-card__subtitle">Быстро и без рисков</div>
+            </div>
+            <div class="market-card__badge market-card__badge--korea">Быстро</div>
+          </div>
+
+          <ul class="market-card__list">
+            <li>
+              <span class="market-card__param">Выгода</span>
+              <strong class="market-card__value market-card__value--korea">Чуть дороже, но спокойнее</strong>
+            </li>
+            <li>
+              <span class="market-card__param">Площадки</span>
+              <strong class="market-card__value">Дилерские площадки</strong>
+            </li>
+            <li>
+              <span class="market-card__param">Срок доставки</span>
+              <strong class="market-card__value">10–45 дней</strong>
+            </li>
+            <li>
+              <span class="market-card__param">Состояние</span>
+              <strong class="market-card__value">Чаще без ДТП</strong>
+            </li>
+            <li>
+              <span class="market-card__param">История</span>
+              <strong class="market-card__value">Прозрачная</strong>
+            </li>
+            <li>
+              <span class="market-card__param">Подходит</span>
+              <strong class="market-card__value">Если важны скорость и состояние</strong>
+            </li>
+          </ul>
+
+          <div class="market-card__tip market-card__tip--korea">
+            ⚡ Идеально, если хочешь быстро получить авто в хорошем состоянии без лишних рисков.
+          </div>
+
+          <a href="#cta" class="market-card__btn market-card__btn--korea">Подобрать авто из Кореи →</a>
+        </div>
+      </div>
+
+      <div class="compare__bottom">
+        <div class="compare__bottom-text">
+          <h3>Не знаешь, что выбрать?</h3>
+          <p>Оставь заявку — подберём варианты из США и Кореи и скажем, где ты реально сэкономишь.</p>
+        </div>
+        <a href="#cta" class="btn btn--primary">Получить подборку авто</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ADVANTAGES -->
+  <section class="advantages" id="advantages">
+    <div class="advantages__wrap">
+      <div class="section-top">
+        <span class="section-label">Почему мы</span>
+        <h2>6 причин выбрать Easy Auto Import</h2>
+      </div>
+      <div class="advantages__grid">
+        <div class="adv-card">
+          <div class="adv-card__icon">🔍</div>
+          <h3>Проверяем каждый авто</h3>
+          <p>История ДТП, пробег, юридическая чистота — проверяем всё перед покупкой.</p>
+        </div>
+        <div class="adv-card">
+          <div class="adv-card__icon">💰</div>
+          <h3>Фиксированная комиссия</h3>
+          <p>Никаких скрытых платежей. Вы знаете итоговую цену до начала поиска.</p>
+        </div>
+        <div class="adv-card">
+          <div class="adv-card__icon">📦</div>
+          <h3>Доставка под ключ</h3>
+          <p>Занимаемся всем: аукцион → порт → растаможка → ваш город.</p>
+        </div>
+        <div class="adv-card">
+          <div class="adv-card__icon">📱</div>
+          <h3>Онлайн-отчёты</h3>
+          <p>Фото и статус на каждом этапе. Вы всегда знаете, где ваш авто.</p>
+        </div>
+        <div class="adv-card">
+          <div class="adv-card__icon">⚖️</div>
+          <h3>Полностью легально</h3>
+          <p>Работаем официально. Все документы, ПТС и таможня — в порядке.</p>
+        </div>
+        <div class="adv-card">
+          <div class="adv-card__icon">🤝</div>
+          <h3>Поддержка 24/7</h3>
+          <p>Менеджер на связи в любое время — Telegram, WhatsApp, телефон.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="steps" id="steps">
+    <div class="steps__wrap">
+      <div class="section-top">
+        <span class="section-label">Процесс</span>
+        <h2>Как это работает</h2>
+        <p>От заявки до авто у вас дома — 4 простых шага</p>
+      </div>
+      <div class="steps__grid">
+        <div class="step-card">
+          <div class="step-card__num">01</div>
+          <h3>Заявка и подбор</h3>
+          <p>Рассказываете о пожеланиях — бюджет, марка, состояние. Мы подбираем варианты.</p>
+        </div>
+        <div class="step-card__arrow">→</div>
+        <div class="step-card">
+          <div class="step-card__num">02</div>
+          <h3>Покупка на аукционе</h3>
+          <p>Участвуем в торгах от вашего имени. Вы утверждаете лот перед покупкой.</p>
+        </div>
+        <div class="step-card__arrow">→</div>
+        <div class="step-card">
+          <div class="step-card__num">03</div>
+          <h3>Доставка и таможня</h3>
+          <p>Транспортируем авто, оформляем все документы и растаможиваем под ключ.</p>
+        </div>
+        <div class="step-card__arrow">→</div>
+        <div class="step-card">
+          <div class="step-card__num">04</div>
+          <h3>Авто у вас</h3>
+          <p>Передаём авто с полным пакетом документов. Готов к постановке на учёт.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta" id="cta">
+    <div class="cta__glow"></div>
+    <div class="cta__wrap">
+      <h2>Готов к своему авто из-за рубежа?</h2>
+      <p>Оставь заявку — бесплатно подберём варианты и рассчитаем итоговую стоимость с доставкой</p>
+      <form class="cta__form" id="ctaForm">
+        <div class="cta__fields">
+          <input type="text" class="cta__input" placeholder="Ваше имя" required>
+          <input type="tel" class="cta__input" placeholder="Номер телефона" required>
+          <input type="text" class="cta__input" placeholder="Какой авто ищете?">
+        </div>
+        <button type="submit" class="btn btn--primary btn--large">Получить подборку бесплатно</button>
+      </form>
+      <p class="cta__note">Нажимая кнопку, вы соглашаетесь на обработку персональных данных</p>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="footer__wrap">
+      <div class="footer__logo">
+        <span>🚗</span> Easy Auto Import
+      </div>
+      <p class="footer__copy">© 2024 Easy Auto Import. Все права защищены.</p>
+      <div class="footer__socials">
+        <a href="#" class="footer__social">Telegram</a>
+        <a href="#" class="footer__social">WhatsApp</a>
+        <a href="#" class="footer__social">Instagram</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
