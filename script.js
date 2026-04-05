@@ -467,7 +467,7 @@ function showCalcResult(dealerPrice, carName) {
     '🚗 *Запрос из калькулятора — Easy Auto Import*',
     '',
     carName ? `🚘 Авто: ${carName}` : '',
-    `💵 Цена дилера: ${fmt(dealerPrice)}`,
+    `💵 Рыночная цена в Казахстане: ${fmt(dealerPrice)}`,
     `✅ Наша цена: ${fmt(ourPrice)}`,
     `💰 Экономия: ${fmt(saving)}`,
   ].filter(Boolean).join('\n');
