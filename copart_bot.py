@@ -3,6 +3,7 @@ import json
 import time
 import logging
 import requests
+import re
 from datetime import datetime
 
 BOT_TOKEN    = os.environ.get("BOT_TOKEN", "")
@@ -11,7 +12,7 @@ SEEN_FILE    = "seen_lots.json"
 MAX_POSTS    = 10
 MIN_YEAR     = 2018
 
-# Приоритетные марки (в порядке приоритета)
+# Priority brands (in order of priority)
 PRIORITY_MAKES = [
     "BMW", "TOYOTA", "LEXUS", "SUBARU",
     "MERCEDES-BENZ", "FORD", "DODGE"
@@ -46,22 +47,17 @@ def save_seen(seen):
 
 
 def get_hd_photo_url(tims):
-    """Получить ссылку на HD фото из поля tims."""
     if not tims:
         return ""
-    # tims может быть полным URL или путём
     if tims.startswith("http"):
         base = tims
     else:
         base = f"https://cs.copart.com/v1/AUTH_svc.pdoc00001/{tims}"
-    # Убираем "tn_" из имени файла для получения HD версии
-    import re
     hd_url = re.sub(r'/tn_', '/', base)
     return hd_url
 
 
 def make_priority_key(make):
-    """Возвращает индекс приоритета марки (меньше = выше)."""
     m = (make or "").upper().strip()
     for i, pm in enumerate(PRIORITY_MAKES):
         if pm in m or m in pm:
@@ -86,9 +82,7 @@ def fetch_lots():
                 "hideFilters": False,
                 "defaultSort": False,
                 "specificRowProviderFlag": True,
-                "page": 0,
-                "size": 100,
-                "start": 0
+                "page": 0, "size": 100, "start": 0
             },
             "isBuyNowSearch": False,
             "isCleanTitle": False
@@ -99,19 +93,25 @@ def fetch_lots():
         items = data.get("data", {}).get("results", {}).get("content", [])
         log.info(f"API returned {len(items)} items")
 
-        for item in items:
-            lot_num  = str(item.get("ln", ""))
-            year     = int(item.get("y", 0) or 0)
-            make     = str(item.get("mk", "") or "").upper()
-            model    = str(item.get("md", "") or "")
-            title    = f"{year} {make} {model}".strip()
-            damage   = item.get("dd", "")
-            odometer = item.get("orr", "")
-            price    = (item.get("dynamicLotDetails") or {}).get("currentBid")
-            url_lot  = f"https://www.copart.com/lot/{lot_num}"
-            photo    = get_hd_photo_url(item.get("tims", ""))
+        # Log first item keys for debugging
+        if items:
+            log.info(f"Sample item keys: {list(items[0].keys())}")
+            log.info(f"Sample item: lcy={items[0].get('lcy')}, y={items[0].get('y')}, mk={items[0].get('mk')}, rd={items[0].get('rd')}, rcn={items[0].get('rcn')}")
 
-            # Фильтр по году
+        for item in items:
+            lot_num = str(item.get("ln", ""))
+            # Try multiple year fields: lcy (lot control year), y, yom
+            year = int(item.get("lcy", 0) or item.get("y", 0) or 0)
+            make = str(item.get("mk", "") or "").upper()
+            model = str(item.get("md", "") or "")
+            title = f"{year} {make} {model}".strip()
+            damage = item.get("dd", "")
+            odometer = item.get("orr", "")
+            price = (item.get("dynamicLotDetails") or {}).get("currentBid")
+            url_lot = f"https://www.copart.com/lot/{lot_num}"
+            photo = get_hd_photo_url(item.get("tims", ""))
+
+            # Year filter
             if year < MIN_YEAR:
                 continue
 
@@ -129,10 +129,8 @@ def fetch_lots():
                     "priority": make_priority_key(make)
                 })
 
-        # Сортируем: сначала приоритетные марки, потом по году
         lots.sort(key=lambda x: (x["priority"], -x["year"]))
-        log.info(f"After filters: {len(lots)} lots (run&drive, year>={MIN_YEAR})")
-
+        log.info(f"After year filter (>={MIN_YEAR}): {len(lots)} lots")
     except Exception as e:
         log.error(f"Error fetching lots: {e}")
     return lots
@@ -153,13 +151,11 @@ def build_caption(lot):
 
 def send_post(lot):
     caption = build_caption(lot)
-    # Пробуем HD фото
     if lot.get("photo"):
         try:
             resp = requests.post(
                 f"https://api.telegram.org/bot{BOT_TOKEN}/sendPhoto",
-                json={"chat_id": CHANNEL_ID, "photo": lot["photo"],
-                      "caption": caption, "parse_mode": "HTML"},
+                json={"chat_id": CHANNEL_ID, "photo": lot["photo"], "caption": caption, "parse_mode": "HTML"},
                 timeout=15
             )
             if resp.status_code == 200:
@@ -167,12 +163,10 @@ def send_post(lot):
             log.warning(f"Photo failed ({resp.status_code}), trying text...")
         except Exception as e:
             log.warning(f"Photo error: {e}")
-    # Fallback: текстовое сообщение
     try:
         resp = requests.post(
             f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
-            json={"chat_id": CHANNEL_ID, "text": caption, "parse_mode": "HTML",
-                  "disable_web_page_preview": False},
+            json={"chat_id": CHANNEL_ID, "text": caption, "parse_mode": "HTML", "disable_web_page_preview": False},
             timeout=15
         )
         resp.raise_for_status()
@@ -184,16 +178,13 @@ def send_post(lot):
 
 def main():
     log.info(f"=== Bot started: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ===")
-    log.info(f"Filters: Run&Drive, year>={MIN_YEAR}, brands={PRIORITY_MAKES}")
-
-    seen     = load_seen()
-    lots     = fetch_lots()
+    log.info(f"Filters: Run&Drive only, year>={MIN_YEAR}, brands={PRIORITY_MAKES}")
+    seen = load_seen()
+    lots = fetch_lots()
     new_lots = [l for l in lots if l["id"] not in seen]
-
     if not new_lots:
         log.info("No new lots found.")
         return
-
     log.info(f"New lots to post: {len(new_lots)}")
     posted = 0
     for lot in new_lots[:MAX_POSTS]:
@@ -204,7 +195,6 @@ def main():
             time.sleep(1.5)
         else:
             log.error(f"Failed: {lot['title']}")
-
     save_seen(seen)
     log.info(f"=== Done. Posted: {posted}/{len(new_lots[:MAX_POSTS])} ===")
 
