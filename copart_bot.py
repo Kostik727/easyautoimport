@@ -12,7 +12,6 @@ SEEN_FILE    = "seen_lots.json"
 MAX_POSTS    = 10
 MIN_YEAR     = 2018
 
-# Priority brands (in order of priority)
 PRIORITY_MAKES = [
     "BMW", "TOYOTA", "LEXUS", "SUBARU",
     "MERCEDES-BENZ", "FORD", "DODGE"
@@ -53,8 +52,7 @@ def get_hd_photo_url(tims):
         base = tims
     else:
         base = f"https://cs.copart.com/v1/AUTH_svc.pdoc00001/{tims}"
-    hd_url = re.sub(r'/tn_', '/', base)
-    return hd_url
+    return re.sub(r'/tn_', '/', base)
 
 
 def make_priority_key(make):
@@ -93,17 +91,13 @@ def fetch_lots():
         items = data.get("data", {}).get("results", {}).get("content", [])
         log.info(f"API returned {len(items)} items")
 
-        # Log first item keys for debugging
-        if items:
-            log.info(f"Sample item keys: {list(items[0].keys())}")
-            log.info(f"Sample item: lcy={items[0].get('lcy')}, y={items[0].get('y')}, mk={items[0].get('mk')}, rd={items[0].get('rd')}, rcn={items[0].get('rcn')}")
-
         for item in items:
             lot_num = str(item.get("ln", ""))
-            # Try multiple year fields: lcy (lot control year), y, yom
-            year = int(item.get("lcy", 0) or item.get("y", 0) or 0)
-            make = str(item.get("mk", "") or "").upper()
-            model = str(item.get("md", "") or "")
+            # lcy = lot control year (vehicle year)
+            year = int(item.get("lcy", 0) or 0)
+            # mkn = make name, lm = lot model
+            make = str(item.get("mkn", "") or "").upper().strip()
+            model = str(item.get("lm", "") or "").strip()
             title = f"{year} {make} {model}".strip()
             damage = item.get("dd", "")
             odometer = item.get("orr", "")
@@ -111,7 +105,6 @@ def fetch_lots():
             url_lot = f"https://www.copart.com/lot/{lot_num}"
             photo = get_hd_photo_url(item.get("tims", ""))
 
-            # Year filter
             if year < MIN_YEAR:
                 continue
 
