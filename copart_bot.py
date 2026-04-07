@@ -9,7 +9,6 @@ from datetime import datetime
 BOT_TOKEN    = os.environ.get("BOT_TOKEN", "")
 CHANNEL_ID   = os.environ.get("CHANNEL_ID", "@easyautoimport")
 SEEN_FILE    = "seen_lots.json"
-MAX_POSTS    = 10
 MIN_YEAR     = 2018
 
 PRIORITY_MAKES = [
@@ -31,18 +30,6 @@ HEADERS = {
     "Referer": "https://www.copart.com/",
     "Origin": "https://www.copart.com",
 }
-
-
-def load_seen():
-    if os.path.exists(SEEN_FILE):
-        with open(SEEN_FILE, "r", encoding="utf-8") as f:
-            return set(json.load(f))
-    return set()
-
-
-def save_seen(seen):
-    with open(SEEN_FILE, "w", encoding="utf-8") as f:
-        json.dump(list(seen), f, ensure_ascii=False, indent=2)
 
 
 def get_hd_photo_url(tims):
@@ -93,9 +80,7 @@ def fetch_lots():
 
         for item in items:
             lot_num = str(item.get("ln", ""))
-            # lcy = lot control year (vehicle year)
             year = int(item.get("lcy", 0) or 0)
-            # mkn = make name, lm = lot model
             make = str(item.get("mkn", "") or "").upper().strip()
             model = str(item.get("lm", "") or "").strip()
             title = f"{year} {make} {model}".strip()
@@ -123,7 +108,9 @@ def fetch_lots():
                 })
 
         lots.sort(key=lambda x: (x["priority"], -x["year"]))
-        log.info(f"After year filter (>={MIN_YEAR}): {len(lots)} lots")
+        log.info(f"After filters: {len(lots)} lots")
+        if lots:
+            log.info(f"First lot preview: title={lots[0]['title']}, damage={lots[0]['damage']}, odo={lots[0]['odometer']}, photo={lots[0]['photo'][:60] if lots[0]['photo'] else 'none'}")
     except Exception as e:
         log.error(f"Error fetching lots: {e}")
     return lots
@@ -153,7 +140,7 @@ def send_post(lot):
             )
             if resp.status_code == 200:
                 return True
-            log.warning(f"Photo failed ({resp.status_code}), trying text...")
+            log.warning(f"Photo failed ({resp.status_code}): {resp.text[:200]}")
         except Exception as e:
             log.warning(f"Photo error: {e}")
     try:
@@ -171,25 +158,17 @@ def send_post(lot):
 
 def main():
     log.info(f"=== Bot started: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ===")
-    log.info(f"Filters: Run&Drive only, year>={MIN_YEAR}, brands={PRIORITY_MAKES}")
-    seen = load_seen()
     lots = fetch_lots()
-    new_lots = [l for l in lots if l["id"] not in seen]
-    if not new_lots:
-        log.info("No new lots found.")
+    if not lots:
+        log.info("No lots found.")
         return
-    log.info(f"New lots to post: {len(new_lots)}")
-    posted = 0
-    for lot in new_lots[:MAX_POSTS]:
-        if send_post(lot):
-            seen.add(lot["id"])
-            posted += 1
-            log.info(f"Posted: {lot['title']} | Lot #{lot['id']}")
-            time.sleep(1.5)
-        else:
-            log.error(f"Failed: {lot['title']}")
-    save_seen(seen)
-    log.info(f"=== Done. Posted: {posted}/{len(new_lots[:MAX_POSTS])} ===")
+    # TEST MODE: always send the first lot (ignore seen)
+    lot = lots[0]
+    log.info(f"TEST: Sending lot: {lot['title']} | #{lot['id']}")
+    if send_post(lot):
+        log.info("SUCCESS - check @easyautoimport")
+    else:
+        log.error("FAILED to post")
 
 
 if __name__ == "__main__":
