@@ -1,6 +1,6 @@
 """
-Telegram Bot: Мониторинг новых лотов на copart.com
-Публикует посты с HD фото в канал @easyautoimport
+Telegram Bot: ÐÐ¾Ð½Ð¸ÑÐ¾ÑÐ¸Ð½Ð³ Ð½Ð¾Ð²ÑÑ Ð»Ð¾ÑÐ¾Ð² Ð½Ð° copart.com
+ÐÑÐ±Ð»Ð¸ÐºÑÐµÑ Ð¿Ð¾ÑÑÑ Ñ HD ÑÐ¾ÑÐ¾ Ð² ÐºÐ°Ð½Ð°Ð» @easyautoimport
 """
 
 import os
@@ -11,18 +11,18 @@ import logging
 import requests
 from datetime import datetime
 
-# ──────────────────────────────────────────────
+# ââââââââââââââââââââââââââââââââââââââââââââââ
 BOT_TOKEN  = os.environ.get("BOT_TOKEN", "8435399634:AAHSjsvlP3LSGo-6TKg9v777dfC-iFct6bk")
 CHANNEL_ID = "@easyautoimport"
 SEEN_FILE  = "seen_lots.json"
 MAX_POSTS  = 10
 MIN_YEAR   = 2018
 
-PRIORITY_MAKES = {
-    "BMW", "TOYOTA", "LEXUS", "SUBARU",
-    "MERCEDES-BENZ", "FORD", "DODGE"
-}
-# ──────────────────────────────────────────────
+PRIORITY_MAKES = [
+    "BMW", "Toyota", "Lexus", "Subaru",
+    "Mercedes-Benz", "Ford", "Dodge"
+]
+# ââââââââââââââââââââââââââââââââââââââââââââââ
 
 logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(message)s",
@@ -42,7 +42,7 @@ HEADERS = {
 }
 
 
-# ── Seen lots ────────────────────────────────
+# ââ Seen lots ââââââââââââââââââââââââââââââââ
 
 def load_seen() -> set:
     if os.path.exists(SEEN_FILE):
@@ -56,7 +56,7 @@ def save_seen(seen: set):
         json.dump(list(seen), f, ensure_ascii=False, indent=2)
 
 
-# ── Photo helpers ────────────────────────────
+# ââ Photo helpers ââââââââââââââââââââââââââââ
 
 def build_photo_urls(tims: str) -> list:
     """Return [hd_url, thumb_url] to try in order."""
@@ -85,121 +85,128 @@ def download_photo(urls: list) -> bytes | None:
     return None
 
 
-# ── Copart API ───────────────────────────────
+# ââ Copart API âââââââââââââââââââââââââââââââ
 
 def fetch_lots() -> list:
     """
-    Пагинируем по страницам Copart с фильтром RUN_AND_DRIVE, фильтруем на клиенте.
-    API возвращает ~20 лотов на страницу; сканируем до 20 страниц (≈400 лотов).
+    ÐÐ»Ñ ÐºÐ°Ð¶Ð´Ð¾Ð¹ Ð¿ÑÐ¸Ð¾ÑÐ¸ÑÐµÑÐ½Ð¾Ð¹ Ð¼Ð°ÑÐºÐ¸ Ð´ÐµÐ»Ð°ÐµÐ¼ Ð¿Ð¾Ð¸ÑÐº Â«{Make} run and driveÂ»
+    ÑÐµÑÐµÐ· /public/lots/search-results â ÑÐµÐ°Ð»ÑÐ½ÑÐ¹ endpoint Ð±ÑÐ°ÑÐ·ÐµÑÐ½Ð¾Ð³Ð¾ UI.
+    Ð¤Ð¸Ð»ÑÑÑÑÐµÐ¼ Ð¿Ð¾ Ð³Ð¾Ð´Ñ Ð½Ð° ÐºÐ»Ð¸ÐµÐ½ÑÐµ.
     """
     lots = []
     seen_ids: set = set()
-    try:
-        for page in range(0, 20):  # до 20 страниц × ~20 = ~400 лотов
+
+    for make in PRIORITY_MAKES:
+        query_str = f"{make} run and drive"
+        log.info(f"ÐÑÐµÐ¼: {query_str}")
+
+        for page in range(0, 5):  # 5 ÑÑÑÐ°Ð½Ð¸Ñ Ã 20 = Ð´Ð¾ 100 Ð»Ð¾ÑÐ¾Ð² Ð½Ð° Ð¼Ð°ÑÐºÑ
             payload = {
-                "query": {
-                    "query": "*",
-                    "filter": {"DAMAGE_TYPE": ["RUN_AND_DRIVE_FILTER"]},
-                    "sort": ["auction_date_type desc", "cd desc"],
-                    "watchListOnly": False,
-                    "freeFormSearch": True,
-                    "hideFilters": False,
-                    "defaultSort": False,
-                    "specificRowProviderFlag": True,
-                    "page": page,
-                    "size": 100,
-                    "start": page * 100
-                },
-                "isBuyNowSearch": False,
-                "isCleanTitle": False
+                "query": [query_str],
+                "filter": {},
+                "sort": [
+                    "salelight_priority asc",
+                    "member_damage_group_priority asc",
+                    "auction_date_type desc",
+                    "auction_date_utc asc"
+                ],
+                "page": page,
+                "size": 20,
+                "start": page * 20,
+                "watchListOnly": False,
+                "freeFormSearch": True,
+                "hideImages": False,
+                "defaultSort": False,
+                "specificRowProvided": False,
+                "displayName": "",
+                "searchName": "",
+                "backUrl": "",
+                "includeTagByField": {},
+                "rawParams": {}
             }
 
-            resp = requests.post(
-                "https://www.copart.com/public/lots/search",
-                json=payload, headers=HEADERS, timeout=25
-            )
-            log.info(f"Страница {page}: HTTP {resp.status_code}")
-            resp.raise_for_status()
-            data  = resp.json()
-            items = data.get("data", {}).get("results", {}).get("content", [])
-            log.info(f"Страница {page}: получено лотов = {len(items)}")
-
-            if not items:
-                break
-
-            # DEBUG: важные поля первого лота первой страницы
-            if page == 0:
-                first = items[0]
-                log.info(
-                    f"DEBUG lot0: ln={first.get('ln')} "
-                    f"lcy={first.get('lcy')} mkn={first.get('mkn')} "
-                    f"dd={first.get('dd')!r}"
+            try:
+                resp = requests.post(
+                    "https://www.copart.com/public/lots/search-results",
+                    json=payload, headers=HEADERS, timeout=25
                 )
+                log.info(f"  {make} ÑÑÑ.{page}: HTTP {resp.status_code}")
+                resp.raise_for_status()
+                data  = resp.json()
+                items = data.get("data", {}).get("results", {}).get("content", [])
+                log.info(f"  {make} ÑÑÑ.{page}: Ð»Ð¾ÑÐ¾Ð² = {len(items)}")
 
-            cnt_yr = cnt_mk = 0
-            for item in items:
-                lot_num = str(item.get("ln", "")).strip()
-                if not lot_num or lot_num in seen_ids:
-                    continue
-                seen_ids.add(lot_num)
+                if not items:
+                    break
 
-                year_raw = item.get("lcy") or item.get("y")
-                try:
-                    year = int(year_raw)
-                except (TypeError, ValueError):
-                    year = 0
+                # DEBUG: Ð¿Ð¾ÐºÐ°Ð·ÑÐ²Ð°ÐµÐ¼ Ð¿ÐµÑÐ²ÑÐ¹ Ð»Ð¾Ñ Ð¿ÐµÑÐ²Ð¾Ð¹ ÑÑÑÐ°Ð½Ð¸ÑÑ
+                if page == 0:
+                    first = items[0]
+                    log.info(
+                        f"  DEBUG lot0: ln={first.get('ln')} "
+                        f"lcy={first.get('lcy')} mkn={first.get('mkn')} "
+                        f"dd={first.get('dd')!r}"
+                    )
 
-                make   = (item.get("mkn") or item.get("mk") or "").upper().strip()
-                model  = (item.get("lm")  or item.get("md") or "").strip()
-                damage = (item.get("dd")  or "").strip()
+                for item in items:
+                    lot_num = str(item.get("ln", "")).strip()
+                    if not lot_num or lot_num in seen_ids:
+                        continue
+                    seen_ids.add(lot_num)
 
-                if year < MIN_YEAR:
-                    continue
-                cnt_yr += 1
+                    year_raw = item.get("lcy") or item.get("y")
+                    try:
+                        year = int(year_raw)
+                    except (TypeError, ValueError):
+                        year = 0
 
-                if make not in PRIORITY_MAKES:
-                    continue
-                cnt_mk += 1
+                    if year < MIN_YEAR:
+                        continue
 
-                tims  = item.get("tims", "")
-                odo   = item.get("orr", "")
-                price = (item.get("dynamicLotDetails") or {}).get("currentBid")
+                    make_name = (item.get("mkn") or item.get("mk") or "").strip()
+                    model     = (item.get("lm")  or item.get("md") or "").strip()
+                    damage    = (item.get("dd")  or "").strip()
+                    tims      = item.get("tims", "")
+                    odo       = item.get("orr", "")
+                    price     = (item.get("dynamicLotDetails") or {}).get("currentBid")
 
-                lots.append({
-                    "id":       lot_num,
-                    "title":    f"{year} {make.title()} {model}".strip(),
-                    "damage":   damage,
-                    "odometer": odo,
-                    "price":    price,
-                    "url":      f"https://www.copart.com/lot/{lot_num}",
-                    "photos":   build_photo_urls(tims),
-                })
+                    lots.append({
+                        "id":       lot_num,
+                        "title":    f"{year} {make_name} {model}".strip(),
+                        "damage":   damage,
+                        "odometer": odo,
+                        "price":    price,
+                        "url":      f"https://www.copart.com/lot/{lot_num}",
+                        "photos":   build_photo_urls(tims),
+                    })
+                    log.info(f"  â {year} {make_name} {model} | {damage}")
 
-            log.info(f"Стр.{page}: год≥{MIN_YEAR}={cnt_yr}, марка={cnt_mk}, итого={len(lots)}")
+            except Exception as e:
+                log.error(f"  ÐÑÐ¸Ð±ÐºÐ° {make} ÑÑÑ.{page}: {e}", exc_info=True)
+                break
 
             if len(lots) >= MAX_POSTS:
                 break
 
-        log.info(f"Итого подходящих лотов: {len(lots)}")
+        if len(lots) >= MAX_POSTS:
+            break
 
-    except Exception as e:
-        log.error(f"Ошибка при получении лотов: {e}", exc_info=True)
-
+    log.info(f"ÐÑÐ¾Ð³Ð¾ Ð¿Ð¾Ð´ÑÐ¾Ð´ÑÑÐ¸Ñ Ð»Ð¾ÑÐ¾Ð²: {len(lots)}")
     return lots
 
 
-# ── Telegram ─────────────────────────────────
+# ââ Telegram âââââââââââââââââââââââââââââââââ
 
 def build_caption(lot: dict) -> str:
-    lines = [f"🚗 <b>{lot['title']}</b>"]
+    lines = [f"ð <b>{lot['title']}</b>"]
     if lot.get("damage"):
-        lines.append(f"💥 Повреждения: {lot['damage']}")
+        lines.append(f"ð¥ ÐÐ¾Ð²ÑÐµÐ¶Ð´ÐµÐ½Ð¸Ñ: {lot['damage']}")
     if lot.get("odometer"):
-        lines.append(f"📏 Пробег: {lot['odometer']}")
+        lines.append(f"ð ÐÑÐ¾Ð±ÐµÐ³: {lot['odometer']}")
     if lot.get("price"):
-        lines.append(f"💰 Ставка: ${lot['price']}")
-    lines.append(f"\n🔗 <a href=\"{lot['url']}\">Открыть лот #{lot['id']}</a>")
-    lines.append("📢 @easyautoimport")
+        lines.append(f"ð° Ð¡ÑÐ°Ð²ÐºÐ°: ${lot['price']}")
+    lines.append(f"\nð <a href=\"{lot['url']}\">ÐÑÐºÑÑÑÑ Ð»Ð¾Ñ #{lot['id']}</a>")
+    lines.append("ð¢ @easyautoimport")
     return "\n".join(lines)
 
 
@@ -217,7 +224,7 @@ def send_post(lot: dict) -> bool:
         log.info(f"sendPhoto: {resp.status_code} {resp.text[:200]}")
         if resp.status_code == 200:
             return True
-        log.warning("Фото не прошло, отправляю текст")
+        log.warning("Ð¤Ð¾ÑÐ¾ Ð½Ðµ Ð¿ÑÐ¾ÑÐ»Ð¾, Ð¾ÑÐ¿ÑÐ°Ð²Ð»ÑÑ ÑÐµÐºÑÑ")
 
     # fallback: text only
     resp = requests.post(
@@ -234,24 +241,24 @@ def send_post(lot: dict) -> bool:
     return resp.status_code == 200
 
 
-# ── Main ──────────────────────────────────────
+# ââ Main ââââââââââââââââââââââââââââââââââââââ
 
 def main():
     log.info("=" * 50)
-    log.info(f"Бот запущен: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    log.info(f"ÐÐ¾Ñ Ð·Ð°Ð¿ÑÑÐµÐ½: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     log.info("=" * 50)
 
     lots = fetch_lots()
 
     if not lots:
-        log.info("Подходящих лотов не найдено.")
+        log.info("ÐÐ¾Ð´ÑÐ¾Ð´ÑÑÐ¸Ñ Ð»Ð¾ÑÐ¾Ð² Ð½Ðµ Ð½Ð°Ð¹Ð´ÐµÐ½Ð¾.")
         return
 
-    # ── TEST MODE: один лот ──
+    # ââ TEST MODE: Ð¾Ð´Ð¸Ð½ Ð»Ð¾Ñ ââ
     lot = lots[0]
-    log.info(f"TEST: обрабатываем лот {lot['id']} — {lot['title']}")
+    log.info(f"TEST: Ð¾Ð±ÑÐ°Ð±Ð°ÑÑÐ²Ð°ÐµÐ¼ Ð»Ð¾Ñ {lot['id']} â {lot['title']}")
     success = send_post(lot)
-    log.info("✅ Опубликовано" if success else "❌ Не сдалось опубликовать")
+    log.info("â ÐÐ¿ÑÐ±Ð»Ð¸ÐºÐ¾Ð²Ð°Ð½Ð¾" if success else "â ÐÐµ ÑÐ´Ð°Ð»Ð¾ÑÑ Ð¾Ð¿ÑÐ±Ð»Ð¸ÐºÐ¾Ð²Ð°ÑÑ")
 
 
 if __name__ == "__main__":
