@@ -38,6 +38,9 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
+MANAGER_PHONE  = "tel:87476899519"
+CALCULATOR_URL = "tel:87476899519"
+
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
                   "AppleWebKit/537.36 (KHTML, like Gecko) "
@@ -212,14 +215,35 @@ def build_caption(lot: dict) -> str:
     return "\n".join(lines)
 
 
+def build_keyboard(lot_id: str) -> dict:
+    return {
+        "inline_keyboard": [
+            [
+                {"text": "\U0001F4E9 \u041d\u0430\u043f\u0438\u0441\u0430\u0442\u044c \u043c\u0435\u043d\u0435\u0434\u0436\u0435\u0440\u0443", "url": MANAGER_PHONE},
+                {"text": "\U0001F4CA \u0420\u0430\u0441\u0441\u0447\u0438\u0442\u0430\u0442\u044c \u043f\u043e\u0434 \u043a\u043b\u044e\u0447", "url": CALCULATOR_URL},
+            ],
+            [
+                {"text": "\u2764\ufe0f \u0421\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c", "callback_data": "save_%s" % lot_id},
+            ],
+        ]
+    }
+
+
 def send_post(lot: dict) -> bool:
     caption     = build_caption(lot)
     photo_bytes = download_photo(lot.get("photos", []))
+    keyboard    = build_keyboard(lot["id"])
+    kb_json     = json.dumps(keyboard, ensure_ascii=False)
 
     if photo_bytes:
         resp = requests.post(
             "https://api.telegram.org/bot%s/sendPhoto" % BOT_TOKEN,
-            data={"chat_id": CHANNEL_ID, "caption": caption, "parse_mode": "HTML"},
+            data={
+                "chat_id":      CHANNEL_ID,
+                "caption":      caption,
+                "parse_mode":   "HTML",
+                "reply_markup": kb_json,
+            },
             files={"photo": ("photo.jpg", photo_bytes, "image/jpeg")},
             timeout=30
         )
@@ -231,10 +255,11 @@ def send_post(lot: dict) -> bool:
     resp = requests.post(
         "https://api.telegram.org/bot%s/sendMessage" % BOT_TOKEN,
         json={
-            "chat_id":    CHANNEL_ID,
-            "text":       caption,
-            "parse_mode": "HTML",
+            "chat_id":                  CHANNEL_ID,
+            "text":                     caption,
+            "parse_mode":               "HTML",
             "disable_web_page_preview": False,
+            "reply_markup":             keyboard,
         },
         timeout=15
     )
