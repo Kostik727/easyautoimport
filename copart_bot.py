@@ -66,10 +66,15 @@ def build_photo_urls(tims: str) -> list:
         return []
     base = tims if tims.startswith("http") else \
            "https://cs.copart.com/v1/AUTH_svc.pdoc00001/" + tims
-    hd = re.sub(r'/tn_', '/', base)
-    if hd != base:
-        return [hd, base]
-    return [base]
+    hd1 = re.sub(r'/tn_', '/', base)
+    hd2 = re.sub(r'_thb\.', '.', base)
+    results = []
+    if hd1 != base:
+        results.append(hd1)
+    if hd2 != base and hd2 not in results:
+        results.append(hd2)
+    results.append(base)
+    return results
 
 
 def download_photo(urls: list):
