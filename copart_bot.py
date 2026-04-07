@@ -89,17 +89,17 @@ def download_photo(urls: list) -> bytes | None:
 
 def fetch_lots() -> list:
     """
-    Пагинируем по страницам Copart, фильтруем на клиенте.
-    DEBUG MODE: логируем поля первого лота и счётчики на каждом шаге.
+    Пагинируем по страницам Copart с фильтром RUN_AND_DRIVE, фильтруем на клиенте.
+    API возвращает ~20 лотов на страницу; сканируем до 20 страниц (≈400 лотов).
     """
     lots = []
     seen_ids: set = set()
     try:
-        for page in range(0, 3):  # 3 страницы × 100 = 300 лотов
+        for page in range(0, 20):  # до 20 страниц × ~20 = ~400 лотов
             payload = {
                 "query": {
                     "query": "*",
-                    "filter": {},
+                    "filter": {"DAMAGE_TYPE": ["RUN_AND_DRIVE_FILTER"]},
                     "sort": ["auction_date_type desc", "cd desc"],
                     "watchListOnly": False,
                     "freeFormSearch": True,
@@ -127,18 +127,16 @@ def fetch_lots() -> list:
             if not items:
                 break
 
-            # DEBUG: показываем ключи и важные поля первого лота
+            # DEBUG: важные поля первого лота первой страницы
             if page == 0:
                 first = items[0]
-                log.info(f"DEBUG keys: {list(first.keys())}")
                 log.info(
                     f"DEBUG lot0: ln={first.get('ln')} "
                     f"lcy={first.get('lcy')} mkn={first.get('mkn')} "
-                    f"mk={first.get('mk')} dd={first.get('dd')!r} "
-                    f"ldu={first.get('ldu')!r} hd={first.get('hd')!r}"
+                    f"dd={first.get('dd')!r}"
                 )
 
-            cnt_yr = cnt_mk = cnt_rd = 0
+            cnt_yr = cnt_mk = 0
             for item in items:
                 lot_num = str(item.get("ln", "")).strip()
                 if not lot_num or lot_num in seen_ids:
@@ -163,14 +161,6 @@ def fetch_lots() -> list:
                     continue
                 cnt_mk += 1
 
-                # Run & Drive check — логируем поле damage для первых совпадений
-                if cnt_mk <= 3:
-                    log.info(f"  MATCH make {make} {year} — dd={damage!r}")
-
-                if "RUN AND DRIVE" not in damage.upper():
-                    continue
-                cnt_rd += 1
-
                 tims  = item.get("tims", "")
                 odo   = item.get("orr", "")
                 price = (item.get("dynamicLotDetails") or {}).get("currentBid")
@@ -185,9 +175,9 @@ def fetch_lots() -> list:
                     "photos":   build_photo_urls(tims),
                 })
 
-            log.info(f"Стр.{page}: год≥{MIN_YEAR}={cnt_yr}, марка={cnt_mk}, R&D={cnt_rd}")
+            log.info(f"Стр.{page}: год≥{MIN_YEAR}={cnt_yr}, марка={cnt_mk}, итого={len(lots)}")
 
-            if lots:
+            if len(lots) >= MAX_POSTS:
                 break
 
         log.info(f"Итого подходящих лотов: {len(lots)}")
@@ -261,7 +251,7 @@ def main():
     lot = lots[0]
     log.info(f"TEST: обрабатываем лот {lot['id']} — {lot['title']}")
     success = send_post(lot)
-    log.info("✅ Опубликовано" if success else "❌ Не удалось опубликовать")
+    log.info("✅ Опубликовано" if success else "❌ Не сдалось опубликовать")
 
 
 if __name__ == "__main__":
