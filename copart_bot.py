@@ -167,6 +167,7 @@ def fetch_lots() -> list:
                     make  = (item.get("mkn") or item.get("mk") or "").upper().strip()
                     model = (item.get("lm")  or item.get("md") or "").strip()
 
+                    # client-side make filter
                     if make not in PRIORITY_MAKES:
                         log.info("  skip make=%s", make)
                         continue
