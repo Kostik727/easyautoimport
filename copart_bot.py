@@ -89,18 +89,17 @@ def download_photo(urls: list) -> bytes | None:
 
 def fetch_lots() -> list:
     """
-    Пагинируем по страницам Copart без серверного фильтра R&D,
-    зато проверяем поле dd на клиенте — так получаем до 500 лотов
-    вместо 20, и гарантированно находим нужный марки.
+    Пагинируем по страницам Copart, фильтруем на клиенте.
+    DEBUG MODE: логируем поля первого лота и счётчики на каждом шаге.
     """
     lots = []
     seen_ids: set = set()
     try:
-        for page in range(0, 5):  # до 5 страниц × 100 = 500 лотов
+        for page in range(0, 3):  # 3 страницы × 100 = 300 лотов
             payload = {
                 "query": {
                     "query": "*",
-                    "filter": {},          # без серверного RUN_AND_DRIVE — фильтруем сами
+                    "filter": {},
                     "sort": ["auction_date_type desc", "cd desc"],
                     "watchListOnly": False,
                     "freeFormSearch": True,
@@ -119,15 +118,29 @@ def fetch_lots() -> list:
                 "https://www.copart.com/public/lots/search",
                 json=payload, headers=HEADERS, timeout=25
             )
+            log.info(f"Страница {page}: HTTP {resp.status_code}")
             resp.raise_for_status()
-            items = resp.json().get("data", {}).get("results", {}).get("content", [])
-            log.info(f"Страница {page}: API вернул {len(items)} лотов")
+            data  = resp.json()
+            items = data.get("data", {}).get("results", {}).get("content", [])
+            log.info(f"Страница {page}: получено лотов = {len(items)}")
 
             if not items:
-                break   # больше страниц нет
+                break
 
+            # DEBUG: показываем ключи и важные поля первого лота
+            if page == 0:
+                first = items[0]
+                log.info(f"DEBUG keys: {list(first.keys())}")
+                log.info(
+                    f"DEBUG lot0: ln={first.get('ln')} "
+                    f"lcy={first.get('lcy')} mkn={first.get('mkn')} "
+                    f"mk={first.get('mk')} dd={first.get('dd')!r} "
+                    f"ldu={first.get('ldu')!r} hd={first.get('hd')!r}"
+                )
+
+            cnt_yr = cnt_mk = cnt_rd = 0
             for item in items:
-                lot_num  = str(item.get("ln", "")).strip()
+                lot_num = str(item.get("ln", "")).strip()
                 if not lot_num or lot_num in seen_ids:
                     continue
                 seen_ids.add(lot_num)
@@ -140,15 +153,23 @@ def fetch_lots() -> list:
 
                 make   = (item.get("mkn") or item.get("mk") or "").upper().strip()
                 model  = (item.get("lm")  or item.get("md") or "").strip()
-                damage = (item.get("dd") or "").strip()
+                damage = (item.get("dd")  or "").strip()
 
                 if year < MIN_YEAR:
                     continue
+                cnt_yr += 1
+
                 if make not in PRIORITY_MAKES:
                     continue
-                # Run & Drive — проверяем поле damage (dd) на клиенте
+                cnt_mk += 1
+
+                # Run & Drive check — логируем поле damage для первых совпадений
+                if cnt_mk <= 3:
+                    log.info(f"  MATCH make {make} {year} — dd={damage!r}")
+
                 if "RUN AND DRIVE" not in damage.upper():
                     continue
+                cnt_rd += 1
 
                 tims  = item.get("tims", "")
                 odo   = item.get("orr", "")
@@ -164,13 +185,15 @@ def fetch_lots() -> list:
                     "photos":   build_photo_urls(tims),
                 })
 
-            if lots:
-                break   # нашли — хватит пагинировать
+            log.info(f"Стр.{page}: год≥{MIN_YEAR}={cnt_yr}, марка={cnt_mk}, R&D={cnt_rd}")
 
-        log.info(f"После фильтров (год≥{MIN_YEAR}, R&D, приоритетные марки): {len(lots)}")
+            if lots:
+                break
+
+        log.info(f"Итого подходящих лотов: {len(lots)}")
 
     except Exception as e:
-        log.error(f"Ошибка при получении лотов: {e}")
+        log.error(f"Ошибка при получении лотов: {e}", exc_info=True)
 
     return lots
 
