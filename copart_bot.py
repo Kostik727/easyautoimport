@@ -88,70 +88,86 @@ def download_photo(urls: list) -> bytes | None:
 # ── Copart API ───────────────────────────────
 
 def fetch_lots() -> list:
+    """
+    Пагинируем по страницам Copart без серверного фильтра R&D,
+    зато проверяем поле dd на клиенте — так получаем до 500 лотов
+    вместо 20, и гарантированно находим нужный марки.
+    """
     lots = []
+    seen_ids: set = set()
     try:
-        payload = {
-            "query": {
-                "query": "*",
-                "filter": {
-                    "SPECIAL_FILTER": ["RUN_AND_DRIVE_FILTER"]
+        for page in range(0, 5):  # до 5 страниц × 100 = 500 лотов
+            payload = {
+                "query": {
+                    "query": "*",
+                    "filter": {},          # без серверного RUN_AND_DRIVE — фильтруем сами
+                    "sort": ["auction_date_type desc", "cd desc"],
+                    "watchListOnly": False,
+                    "freeFormSearch": True,
+                    "hideFilters": False,
+                    "defaultSort": False,
+                    "specificRowProviderFlag": True,
+                    "page": page,
+                    "size": 100,
+                    "start": page * 100
                 },
-                "sort": ["auction_date_type desc", "cd desc"],
-                "watchListOnly": False,
-                "freeFormSearch": True,
-                "hideFilters": False,
-                "defaultSort": False,
-                "specificRowProviderFlag": True,
-                "page": 0,
-                "size": 100,
-                "start": 0
-            },
-            "isBuyNowSearch": False,
-            "isCleanTitle": False
-        }
+                "isBuyNowSearch": False,
+                "isCleanTitle": False
+            }
 
-        resp = requests.post(
-            "https://www.copart.com/public/lots/search",
-            json=payload, headers=HEADERS, timeout=25
-        )
-        resp.raise_for_status()
-        items = resp.json().get("data", {}).get("results", {}).get("content", [])
-        log.info(f"API вернул {len(items)} лотов")
+            resp = requests.post(
+                "https://www.copart.com/public/lots/search",
+                json=payload, headers=HEADERS, timeout=25
+            )
+            resp.raise_for_status()
+            items = resp.json().get("data", {}).get("results", {}).get("content", [])
+            log.info(f"Страница {page}: API вернул {len(items)} лотов")
 
-        for item in items:
-            lot_num  = str(item.get("ln", "")).strip()
-            year_raw = item.get("lcy") or item.get("y")
-            try:
-                year = int(year_raw)
-            except (TypeError, ValueError):
-                year = 0
+            if not items:
+                break   # больше страниц нет
 
-            make  = (item.get("mkn") or item.get("mk") or "").upper().strip()
-            model = (item.get("lm")  or item.get("md") or "").strip()
+            for item in items:
+                lot_num  = str(item.get("ln", "")).strip()
+                if not lot_num or lot_num in seen_ids:
+                    continue
+                seen_ids.add(lot_num)
 
-            if not lot_num:
-                continue
-            if year < MIN_YEAR:
-                continue
-            if make not in PRIORITY_MAKES:
-                continue
+                year_raw = item.get("lcy") or item.get("y")
+                try:
+                    year = int(year_raw)
+                except (TypeError, ValueError):
+                    year = 0
 
-            tims   = item.get("tims", "")
-            damage = item.get("dd", "")
-            odo    = item.get("orr", "")
-            price  = (item.get("dynamicLotDetails") or {}).get("currentBid")
+                make   = (item.get("mkn") or item.get("mk") or "").upper().strip()
+                model  = (item.get("lm")  or item.get("md") or "").strip()
+                damage = (item.get("dd") or "").strip()
 
-            lots.append({
-                "id":       lot_num,
-                "title":    f"{year} {make.title()} {model}".strip(),
-                "damage":   damage,
-                "odometer": odo,
-                "price":    price,
-                "url":      f"https://www.copart.com/lot/{lot_num}",
-                "photos":   build_photo_urls(tims),
-            })
+                if year < MIN_YEAR:
+                    continue
+                if make not in PRIORITY_MAKES:
+                    continue
+                # Run & Drive — проверяем поле damage (dd) на клиенте
+                if "RUN AND DRIVE" not in damage.upper():
+                    continue
 
-        log.info(f"После фильтров (год≥{MIN_YEAR}, приоритетные марки): {len(lots)}")
+                tims  = item.get("tims", "")
+                odo   = item.get("orr", "")
+                price = (item.get("dynamicLotDetails") or {}).get("currentBid")
+
+                lots.append({
+                    "id":       lot_num,
+                    "title":    f"{year} {make.title()} {model}".strip(),
+                    "damage":   damage,
+                    "odometer": odo,
+                    "price":    price,
+                    "url":      f"https://www.copart.com/lot/{lot_num}",
+                    "photos":   build_photo_urls(tims),
+                })
+
+            if lots:
+                break   # нашли — хватит пагинировать
+
+        log.info(f"После фильтров (год≥{MIN_YEAR}, R&D, приоритетные марки): {len(lots)}")
 
     except Exception as e:
         log.error(f"Ошибка при получении лотов: {e}")
