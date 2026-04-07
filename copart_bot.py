@@ -38,8 +38,8 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
-MANAGER_PHONE  = "tel:87476899519"
-CALCULATOR_URL = "tel:87476899519"
+MANAGER_PHONE  = "https://t.me/+77476899519"
+CALCULATOR_URL = "https://t.me/+77476899519"
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
