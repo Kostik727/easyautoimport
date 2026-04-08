@@ -215,7 +215,11 @@ def build_caption(lot):
     if lot.get("damage"):
         lines.append("🔧 Повреждение: %s" % lot["damage"])
     if lot.get("odometer"):
-        lines.append("📏 Пробег: %s mi" % lot["odometer"])
+        try:
+            odo_km = int(float(lot["odometer"]) * 1.64)
+            lines.append("📏 Пробег: %s км" % "{:,}".format(odo_km).replace(",", " "))
+        except (ValueError, TypeError):
+            lines.append("📏 Пробег: %s км" % lot["odometer"])
     if lot.get("engine"):
         lines.append("⚙️ Двигатель: %s" % lot["engine"])
     if lot.get("drive"):
