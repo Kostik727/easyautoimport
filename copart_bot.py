@@ -170,12 +170,25 @@ def fetch_lots() -> list:
                     odo    = item.get("orr", "")
                     price  = (item.get("dynamicLotDetails") or {}).get("currentBid")
 
+                    engine = (item.get("egn") or "").strip()
+                    drive  = (item.get("drv") or "").strip()
+                    fuel   = (item.get("ft") or "").strip()
+                    color  = (item.get("clr") or "").strip()
+                    vin    = (item.get("fv") or "").strip()
+                    transmission = (item.get("tmtp") or "").strip()
+
                     lots.append({
                         "id":       lot_num,
                         "title":    "%d %s %s" % (year, make.title(), model),
                         "damage":   damage,
                         "odometer": odo,
                         "price":    price,
+                        "engine":   engine,
+                        "drive":    drive,
+                        "fuel":     fuel,
+                        "color":    color,
+                        "vin":      vin,
+                        "transmission": transmission,
                         "url":      "https://www.copart.com/lot/" + lot_num,
                         "photos":   build_photo_urls(tims),
                     })
@@ -195,18 +208,28 @@ def fetch_lots() -> list:
     return lots
 
 def build_caption(lot):
-    lines = ["<b>%s</b>" % lot["title"]]
-    if lot.get("damage"):
-        lines.append("🔧 Damage: %s" % lot["damage"])
-    if lot.get("odometer"):
-        lines.append("📏 Odometer: %s mi" % lot["odometer"])
-    if lot.get("price"):
-        lines.append("💰 Current bid: $%s" % lot["price"])
+    lines = ["🚗 <b>%s</b>" % lot["title"]]
     lines.append("")
-    lines.append('<a href="%s">🔗 Open lot #%s on Copart</a>' % (lot["url"], lot["id"]))
+    if lot.get("price"):
+        lines.append("💰 Текущая ставка: $%s" % lot["price"])
+    if lot.get("damage"):
+        lines.append("🔧 Повреждение: %s" % lot["damage"])
+    if lot.get("odometer"):
+        lines.append("📏 Пробег: %s mi" % lot["odometer"])
+    if lot.get("engine"):
+        lines.append("⚙️ Двигатель: %s" % lot["engine"])
+    if lot.get("drive"):
+        lines.append("🔄 Привод: %s" % lot["drive"])
+    if lot.get("fuel"):
+        lines.append("⛽ Топливо: %s" % lot["fuel"])
+    if lot.get("color"):
+        lines.append("🎨 Цвет: %s" % lot["color"])
+    if lot.get("vin"):
+        lines.append("🔑 VIN: %s" % lot["vin"])
+    lines.append("")
+    lines.append('<a href="%s">🔗 Лот #%s на Copart</a>' % (lot["url"], lot["id"]))
     lines.append("@easyautoimport")
     return "\n".join(lines)
-
 
 def build_keyboard(lot_id):
     return {
