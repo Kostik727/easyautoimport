@@ -38,13 +38,15 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
-MANAGER_PHONE  = "https://t.me/+77476899519"
+MANAGER_PHONE = "https://t.me/+77476899519"
 CALCULATOR_URL = "https://t.me/+77476899519"
 
 HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-                  "AppleWebKit/537.36 (KHTML, like Gecko) "
-                  "Chrome/120.0.0.0 Safari/537.36",
+    "User-Agent": (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/120.0.0.0 Safari/537.36"
+    ),
     "Accept": "application/json, text/plain, */*",
     "Accept-Language": "en-US,en;q=0.9",
     "Referer": "https://www.copart.com/",
@@ -70,8 +72,8 @@ def build_photo_urls(tims: str) -> list:
     base = tims if tims.startswith("http") else \
            "https://cs.copart.com/v1/AUTH_svc.pdoc00001/" + tims
     hd1 = re.sub(r'/tn_', '/', base)
-    hd2 = re.sub(r'_thb\.', '_ful.', base)
-    hd3 = re.sub(r'_thb\.', '.', base)
+    hd2 = re.sub(r'_thb\\.', '_ful.', base)
+    hd3 = re.sub(r'_thb\\.', '.', base)
     results = []
     if hd1 != base:
         results.append(hd1)
@@ -96,10 +98,9 @@ def download_photo(urls: list):
             log.warning("photo error: %s", e)
     return None
 
-
 def fetch_lots() -> list:
     lots = []
-    seen_ids: set = set()
+    seen_ids = set()
 
     for query_str in QUERY_TERMS:
         log.info("Searching: %s", query_str)
@@ -143,12 +144,6 @@ def fetch_lots() -> list:
                 if not items:
                     break
 
-                if page == 0 and items:
-                    first = items[0]
-                    log.info("  DEBUG lot0: ln=%s lcy=%s mkn=%s dd=%r",
-                             first.get("ln"), first.get("lcy"),
-                             first.get("mkn"), first.get("dd"))
-
                 for item in items:
                     lot_num = str(item.get("ln", "")).strip()
                     if not lot_num or lot_num in seen_ids:
@@ -167,9 +162,7 @@ def fetch_lots() -> list:
                     make  = (item.get("mkn") or item.get("mk") or "").upper().strip()
                     model = (item.get("lm")  or item.get("md") or "").strip()
 
-                    # client-side make filter
                     if make not in PRIORITY_MAKES:
-                        log.info("  skip make=%s", make)
                         continue
 
                     damage = (item.get("dd") or "").strip()
@@ -201,27 +194,26 @@ def fetch_lots() -> list:
     log.info("Total matching lots: %d", len(lots))
     return lots
 
-
-def build_caption(lot: dict) -> str:
+def build_caption(lot):
     lines = ["<b>%s</b>" % lot["title"]]
     if lot.get("damage"):
-        lines.append("Damage: %s" % lot["damage"])
+        lines.append("\u{1F527} Damage: %s" % lot["damage"])
     if lot.get("odometer"):
-        lines.append("Odometer: %s mi" % lot["odometer"])
+        lines.append("\u{1F4CF} Odometer: %s mi" % lot["odometer"])
     if lot.get("price"):
-        lines.append("Current bid: $%s" % lot["price"])
+        lines.append("\u{1F4B0} Current bid: $%s" % lot["price"])
     lines.append("")
-    lines.append('<a href="%s">Open lot #%s</a>' % (lot["url"], lot["id"]))
+    lines.append('<a href="%s">\u{1F517} Open lot #%s on Copart</a>' % (lot["url"], lot["id"]))
     lines.append("@easyautoimport")
     return "\n".join(lines)
 
 
-def build_keyboard(lot_id: str) -> dict:
+def build_keyboard(lot_id):
     return {
         "inline_keyboard": [
             [
-                {"text": "\U0001F4E9 \u041d\u0430\u043f\u0438\u0441\u0430\u0442\u044c \u043c\u0435\u043d\u0435\u0434\u0436\u0435\u0440\u0443", "url": MANAGER_PHONE},
-                {"text": "\U0001F4CA \u0420\u0430\u0441\u0441\u0447\u0438\u0442\u0430\u0442\u044c \u043f\u043e\u0434 \u043a\u043b\u044e\u0447", "url": CALCULATOR_URL},
+                {"text": "\u{1F4E9} \u041d\u0430\u043f\u0438\u0441\u0430\u0442\u044c \u043c\u0435\u043d\u0435\u0434\u0436\u0435\u0440\u0443", "url": MANAGER_PHONE},
+                {"text": "\u{1F4CA} \u0420\u0430\u0441\u0441\u0447\u0438\u0442\u0430\u0442\u044c \u043f\u043e\u0434 \u043a\u043b\u044e\u0447", "url": CALCULATOR_URL},
             ],
             [
                 {"text": "\u2764\ufe0f \u0421\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c", "callback_data": "save_%s" % lot_id},
@@ -229,8 +221,7 @@ def build_keyboard(lot_id: str) -> dict:
         ]
     }
 
-
-def send_post(lot: dict) -> bool:
+def send_post(lot):
     caption     = build_caption(lot)
     photo_bytes = download_photo(lot.get("photos", []))
     keyboard    = build_keyboard(lot["id"])
@@ -268,22 +259,40 @@ def send_post(lot: dict) -> bool:
     return resp.status_code == 200
 
 
-def main():
+def run_scraper():
+    """Fetch lots from Copart and post new ones to the channel."""
     log.info("=" * 50)
-    log.info("Bot started: %s", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    log.info("Scraper run: %s", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
     log.info("=" * 50)
 
+    seen = load_seen()
     lots = fetch_lots()
 
     if not lots:
         log.info("No matching lots found.")
-        return
+        return 0
 
-    lot = lots[0]
-    log.info("TEST: posting lot %s - %s", lot["id"], lot["title"])
-    success = send_post(lot)
-    log.info("Published OK" if success else "Failed to publish")
+    posted = 0
+    for lot in lots:
+        if lot["id"] in seen:
+            log.info("Already posted: %s", lot["id"])
+            continue
+
+        log.info("Posting lot %s - %s", lot["id"], lot["title"])
+        success = send_post(lot)
+
+        if success:
+            seen.add(lot["id"])
+            save_seen(seen)
+            posted += 1
+            log.info("Published OK (%d/%d)", posted, len(lots))
+            time.sleep(5)
+        else:
+            log.warning("Failed to publish lot %s", lot["id"])
+
+    log.info("Scraper done: posted %d new lots", posted)
+    return posted
 
 
 if __name__ == "__main__":
-    main()
+    run_scraper()
