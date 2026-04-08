@@ -197,13 +197,13 @@ def fetch_lots() -> list:
 def build_caption(lot):
     lines = ["<b>%s</b>" % lot["title"]]
     if lot.get("damage"):
-        lines.append("\u{1F527} Damage: %s" % lot["damage"])
+        lines.append("🔧 Damage: %s" % lot["damage"])
     if lot.get("odometer"):
-        lines.append("\u{1F4CF} Odometer: %s mi" % lot["odometer"])
+        lines.append("📏 Odometer: %s mi" % lot["odometer"])
     if lot.get("price"):
-        lines.append("\u{1F4B0} Current bid: $%s" % lot["price"])
+        lines.append("💰 Current bid: $%s" % lot["price"])
     lines.append("")
-    lines.append('<a href="%s">\u{1F517} Open lot #%s on Copart</a>' % (lot["url"], lot["id"]))
+    lines.append('<a href="%s">🔗 Open lot #%s on Copart</a>' % (lot["url"], lot["id"]))
     lines.append("@easyautoimport")
     return "\n".join(lines)
 
