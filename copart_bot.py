@@ -9,6 +9,7 @@ import time
 import logging
 import requests
 from datetime import datetime
+from urllib.parse import quote
 
 BOT_TOKEN  = os.environ.get("BOT_TOKEN", "8435399634:AAHSjsvlP3LSGo-6TKg9v777dfC-iFct6bk")
 CHANNEL_ID = "@easyautoimport"
@@ -258,7 +259,10 @@ def build_caption(lot):
     lines.append("@easyautoimport")
     return "\n".join(lines)
 
-def build_ics(lot):
+APP_HOST = "https://easyautoimport-production.up.railway.app"
+
+
+def build_calendar_url(lot):
     ad = lot.get("auction_date")
     if not ad:
         return None
@@ -270,58 +274,25 @@ def build_ics(lot):
         date_str = dt.strftime("%Y%m%dT%H%M%SZ")
         end_dt = datetime.utcfromtimestamp(dt.timestamp() + 3600)
         end_str = end_dt.strftime("%Y%m%dT%H%M%SZ")
-        now_str = datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
-        ics = (
-            "BEGIN:VCALENDAR\r\n"
-            "VERSION:2.0\r\n"
-            "PRODID:-//EasyAutoImport//Bot//EN\r\n"
-            "BEGIN:VEVENT\r\n"
-            "DTSTART:%s\r\n"
-            "DTEND:%s\r\n"
-            "DTSTAMP:%s\r\n"
-            "SUMMARY:Аукцион Copart: %s\r\n"
-            "DESCRIPTION:Лот #%s\\n%s\r\n"
-            "URL:%s\r\n"
-            "END:VEVENT\r\n"
-            "END:VCALENDAR\r\n"
-        ) % (date_str, end_str, now_str, lot["title"], lot["id"], lot["url"], lot["url"])
-        return ics.encode("utf-8")
+        title = quote("Аукцион Copart: %s" % lot["title"])
+        return "%s/cal?t=%s&d=%s&de=%s&l=%s" % (APP_HOST, title, date_str, end_str, lot["id"])
     except (ValueError, TypeError, OSError):
         return None
 
 
 def build_keyboard(lot):
     lot_id = lot["id"]
-    return {
-        "inline_keyboard": [
-            [
-                {"text": "📩 Написать менеджеру", "url": MANAGER_PHONE},
-                {"text": "📊 Рассчитать под ключ", "url": CALCULATOR_URL},
-            ],
-            [
-                {"text": "❤️ Сохранить", "callback_data": "save_%s" % lot_id},
-            ],
-        ]
-    }
-
-def send_ics(lot):
-    ics_data = build_ics(lot)
-    if not ics_data:
-        return
-    filename = "auction_%s.ics" % lot["id"]
-    try:
-        resp = requests.post(
-            "https://api.telegram.org/bot%s/sendDocument" % BOT_TOKEN,
-            data={
-                "chat_id": CHANNEL_ID,
-                "caption": "📅 Добавить в календарь: %s" % lot["title"],
-            },
-            files={"document": (filename, ics_data, "text/calendar")},
-            timeout=15,
-        )
-        log.info("sendICS: %s", resp.status_code)
-    except Exception as e:
-        log.warning("ICS send error: %s", e)
+    rows = [
+        [
+            {"text": "📩 Написать менеджеру", "url": MANAGER_PHONE},
+            {"text": "📊 Рассчитать под ключ", "url": CALCULATOR_URL},
+        ],
+    ]
+    cal_url = build_calendar_url(lot)
+    if cal_url:
+        rows.append([{"text": "📅 Добавить в календарь", "url": cal_url}])
+    rows.append([{"text": "❤️ Сохранить", "callback_data": "save_%s" % lot_id}])
+    return {"inline_keyboard": rows}
 
 
 def send_post(lot):
@@ -344,7 +315,6 @@ def send_post(lot):
         )
         log.info("sendPhoto: %s %s", resp.status_code, resp.text[:200])
         if resp.status_code == 200:
-            send_ics(lot)
             return True
         log.warning("Photo failed, falling back to text")
 
@@ -360,11 +330,7 @@ def send_post(lot):
         timeout=15
     )
     log.info("sendMessage: %s", resp.status_code)
-    if resp.status_code != 200:
-        return False
-
-    send_ics(lot)
-    return True
+    return resp.status_code == 200
 
 
 def run_scraper():

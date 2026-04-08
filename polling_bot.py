@@ -11,6 +11,8 @@ import logging
 import threading
 import requests
 from datetime import datetime
+from http.server import HTTPServer, BaseHTTPRequestHandler
+from urllib.parse import urlparse, parse_qs
 
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "8435399634:AAHSjsvlP3LSGo-6TKg9v777dfC-iFct6bk")
 API = "https://api.telegram.org/bot" + BOT_TOKEN
@@ -150,12 +152,71 @@ def scraper_loop():
         time.sleep(SCRAPE_INTERVAL)
 
 
+# ---- calendar HTTP server ----
+
+CAL_PORT = int(os.environ.get("PORT", 8080))
+
+class CalHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        parsed = urlparse(self.path)
+        if parsed.path != "/cal":
+            self.send_response(404)
+            self.end_headers()
+            return
+        params = parse_qs(parsed.query)
+        title = params.get("t", ["Аукцион Copart"])[0]
+        date = params.get("d", [""])[0]
+        lot = params.get("l", [""])[0]
+        if not date:
+            self.send_response(400)
+            self.end_headers()
+            self.wfile.write(b"Missing date param")
+            return
+        end_date = params.get("de", [date])[0]
+        url = "https://www.copart.com/lot/%s" % lot if lot else ""
+        ics = (
+            "BEGIN:VCALENDAR\r\n"
+            "VERSION:2.0\r\n"
+            "PRODID:-//EasyAutoImport//Bot//EN\r\n"
+            "BEGIN:VEVENT\r\n"
+            "DTSTART:%s\r\n"
+            "DTEND:%s\r\n"
+            "DTSTAMP:%s\r\n"
+            "SUMMARY:%s\r\n"
+            "DESCRIPTION:Лот #%s\\n%s\r\n"
+            "URL:%s\r\n"
+            "END:VEVENT\r\n"
+            "END:VCALENDAR\r\n"
+        ) % (date, end_date, datetime.utcnow().strftime("%Y%m%dT%H%M%SZ"),
+             title, lot, url, url)
+        data = ics.encode("utf-8")
+        self.send_response(200)
+        self.send_header("Content-Type", "text/calendar; charset=utf-8")
+        self.send_header("Content-Disposition", "attachment; filename=auction_%s.ics" % lot)
+        self.send_header("Content-Length", str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
+
+    def log_message(self, fmt, *args):
+        log.info("HTTP: " + fmt, *args)
+
+
+def start_http_server():
+    server = HTTPServer(("0.0.0.0", CAL_PORT), CalHandler)
+    log.info("Calendar HTTP server on port %d", CAL_PORT)
+    server.serve_forever()
+
+
 # ---- main polling loop ----
 
 def main():
     log.info("=" * 50)
     log.info("Polling bot started")
     log.info("=" * 50)
+
+    # Start HTTP server for .ics calendar links
+    http_thread = threading.Thread(target=start_http_server, daemon=True)
+    http_thread.start()
 
     # Start scraper in background thread
     t = threading.Thread(target=scraper_loop, daemon=True)
