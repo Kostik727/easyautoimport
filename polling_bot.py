@@ -58,13 +58,13 @@ def answer_callback(cb_id, text):
 
 def handle_start(chat_id):
     text = (
-        "\u041f\u0440\u0438\u0432\u0435\u0442! \u{1F44B}\n\n"
-        "\u042f \u0431\u043e\u0442 \u043a\u0430\u043d\u0430\u043b\u0430 @easyautoimport.\n"
-        "\u041d\u0430\u0436\u043c\u0438\u0442\u0435 \u2764\ufe0f \u0421\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c \u043d\u0430 \u043f\u043e\u0441\u0442\u0430\u0445 \u043a\u0430\u043d\u0430\u043b\u0430,\n"
-        "\u0447\u0442\u043e\u0431\u044b \u0441\u043e\u0445\u0440\u0430\u043d\u044f\u0442\u044c \u043b\u043e\u0442\u044b.\n\n"
-        "\u041a\u043e\u043c\u0430\u043d\u0434\u044b:\n"
-        "/saved - \u043c\u043e\u0438 \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u043d\u044b\u0435\n"
-        "/help - \u043f\u043e\u043c\u043e\u0449\u044c"
+        "Привет! 👋\n\n"
+        "Я бот канала @easyautoimport.\n"
+        "Нажмите ❤️ Сохранить на постах канала,\n"
+        "чтобы сохранять лоты.\n\n"
+        "Команды:\n"
+        "/saved - мои сохраненные\n"
+        "/help - помощь"
     )
     send("sendMessage", chat_id=chat_id, text=text, parse_mode="HTML")
 
@@ -73,9 +73,9 @@ def handle_saved(chat_id, user_id):
     data = load_saved()
     user_lots = data.get(str(user_id), [])
     if not user_lots:
-        send("sendMessage", chat_id=chat_id, text="\u0423 \u0432\u0430\u0441 \u043f\u043e\u043a\u0430 \u043d\u0435\u0442 \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u043d\u044b\u0445 \u043b\u043e\u0442\u043e\u0432.")
+        send("sendMessage", chat_id=chat_id, text="У вас пока нет сохраненных лотов.")
         return
-    lines = ["\u{1F4BE} <b>\u0412\u0430\u0448\u0438 \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u043d\u044b\u0435 \u043b\u043e\u0442\u044b:</b>\n"]
+    lines = ["💾 <b>Ваши сохраненные лоты:</b>\n"]
     for lot_id in user_lots[-20:]:
         lines.append('<a href="https://www.copart.com/lot/%s">Lot #%s</a>' % (lot_id, lot_id))
     send("sendMessage", chat_id=chat_id, text="\n".join(lines), parse_mode="HTML", disable_web_page_preview=True)
@@ -83,10 +83,10 @@ def handle_saved(chat_id, user_id):
 
 def handle_help(chat_id):
     text = (
-        "\u{1F527} <b>\u041f\u043e\u043c\u043e\u0449\u044c</b>\n\n"
-        "\u2764\ufe0f \u0421\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c - \u0441\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c \u043b\u043e\u0442\n"
-        "/saved - \u043f\u043e\u0441\u043c\u043e\u0442\u0440\u0435\u0442\u044c \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u043d\u044b\u0435\n"
-        "/help - \u044d\u0442\u0430 \u0441\u043f\u0440\u0430\u0432\u043a\u0430"
+        "🔧 <b>Помощь</b>\n\n"
+        "❤️ Сохранить - сохранить лот\n"
+        "/saved - посмотреть сохраненные\n"
+        "/help - эта справка"
     )
     send("sendMessage", chat_id=chat_id, text=text, parse_mode="HTML")
 
@@ -102,12 +102,12 @@ def handle_callback(cb):
         saved = load_saved()
         user_lots = saved.get(user_id, [])
         if lot_id in user_lots:
-            answer_callback(cb_id, "\u0423\u0436\u0435 \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u043e!")
+            answer_callback(cb_id, "Уже сохранено!")
             return
         user_lots.append(lot_id)
         saved[user_id] = user_lots
         save_saved(saved)
-        answer_callback(cb_id, "\u2764\ufe0f \u0421\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u043e! /saved")
+        answer_callback(cb_id, "❤️ Сохранено! /saved")
         log.info("User %s saved lot %s", user_id, lot_id)
 
 
