@@ -163,10 +163,8 @@ class CalHandler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         params = parse_qs(parsed.query)
 
-        if parsed.path == "/cal.ics":
+        if parsed.path in ("/cal", "/cal.ics"):
             self._serve_ics(params)
-        elif parsed.path == "/cal":
-            self._serve_redirect(params)
         else:
             self.send_response(404)
             self.end_headers()
@@ -201,28 +199,6 @@ class CalHandler(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Content-Type", "text/calendar; charset=utf-8")
         self.send_header("Content-Disposition", "attachment; filename=auction_%s.ics" % lot)
-        self.send_header("Content-Length", str(len(data)))
-        self.end_headers()
-        self.wfile.write(data)
-
-    def _serve_redirect(self, params):
-        qs = self.path.split("?", 1)[1] if "?" in self.path else ""
-        webcal_url = "webcal://easyautoimport-production.up.railway.app/cal.ics?%s" % qs
-        https_url = "%s/cal.ics?%s" % (APP_HOST, qs)
-        html = (
-            '<!DOCTYPE html><html><head><meta charset="utf-8">'
-            '<meta name="viewport" content="width=device-width,initial-scale=1">'
-            '<title>Добавить в календарь</title>'
-            '<script>window.location="%s";</script>'
-            '</head><body style="font-family:sans-serif;text-align:center;padding:40px;">'
-            '<h2>📅 Добавить в календарь</h2>'
-            '<p>Если событие не добавилось автоматически:</p>'
-            '<p><a href="%s" style="font-size:18px;">Скачать .ics файл</a></p>'
-            '</body></html>'
-        ) % (webcal_url, https_url)
-        data = html.encode("utf-8")
-        self.send_response(200)
-        self.send_header("Content-Type", "text/html; charset=utf-8")
         self.send_header("Content-Length", str(len(data)))
         self.end_headers()
         self.wfile.write(data)
