@@ -180,6 +180,8 @@ def fetch_lots() -> list:
                     lots.append({
                         "id":       lot_num,
                         "title":    "%d %s %s" % (year, make.title(), model),
+                        "make":     make.title(),
+                        "model":    model,
                         "damage":   damage,
                         "odometer": odo,
                         "price":    price,
@@ -232,6 +234,15 @@ def build_caption(lot):
         lines.append("🔑 VIN: %s" % lot["vin"])
     lines.append("")
     lines.append('<a href="%s">🔗 Лот #%s на Copart</a>' % (lot["url"], lot["id"]))
+    tags = []
+    if lot.get("make"):
+        tags.append("#%s" % lot["make"].replace("-", "").replace(" ", ""))
+    if lot.get("model"):
+        model_tag = lot["model"].replace("-", "").replace(" ", "")
+        if model_tag:
+            tags.append("#%s" % model_tag)
+    if tags:
+        lines.append(" ".join(tags))
     lines.append("@easyautoimport")
     return "\n".join(lines)
 
