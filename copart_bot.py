@@ -212,11 +212,11 @@ def build_keyboard(lot_id):
     return {
         "inline_keyboard": [
             [
-                {"text": "\u{1F4E9} \u041d\u0430\u043f\u0438\u0441\u0430\u0442\u044c \u043c\u0435\u043d\u0435\u0434\u0436\u0435\u0440\u0443", "url": MANAGER_PHONE},
-                {"text": "\u{1F4CA} \u0420\u0430\u0441\u0441\u0447\u0438\u0442\u0430\u0442\u044c \u043f\u043e\u0434 \u043a\u043b\u044e\u0447", "url": CALCULATOR_URL},
+                {"text": "📩 Написать менеджеру", "url": MANAGER_PHONE},
+                {"text": "📊 Рассчитать под ключ", "url": CALCULATOR_URL},
             ],
             [
-                {"text": "\u2764\ufe0f \u0421\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c", "callback_data": "save_%s" % lot_id},
+                {"text": "❤️ Сохранить", "callback_data": "save_%s" % lot_id},
             ],
         ]
     }
