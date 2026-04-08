@@ -9,6 +9,7 @@ import time
 import logging
 import requests
 from datetime import datetime
+from urllib.parse import quote
 
 BOT_TOKEN  = os.environ.get("BOT_TOKEN", "8435399634:AAHSjsvlP3LSGo-6TKg9v777dfC-iFct6bk")
 CHANNEL_ID = "@easyautoimport"
@@ -176,6 +177,7 @@ def fetch_lots() -> list:
                     color  = (item.get("clr") or "").strip()
                     vin    = (item.get("fv") or "").strip()
                     transmission = (item.get("tmtp") or "").strip()
+                    auction_date = item.get("ad") or ""
 
                     lots.append({
                         "id":       lot_num,
@@ -191,6 +193,7 @@ def fetch_lots() -> list:
                         "color":    color,
                         "vin":      vin,
                         "transmission": transmission,
+                        "auction_date": auction_date,
                         "url":      "https://www.copart.com/lot/" + lot_num,
                         "photos":   build_photo_urls(tims),
                     })
@@ -232,6 +235,16 @@ def build_caption(lot):
         lines.append("🎨 Цвет: %s" % lot["color"])
     if lot.get("vin"):
         lines.append("🔑 VIN: %s" % lot["vin"])
+    if lot.get("auction_date"):
+        try:
+            ad = lot["auction_date"]
+            if isinstance(ad, (int, float)):
+                dt = datetime.utcfromtimestamp(ad / 1000)
+            else:
+                dt = datetime.strptime(str(ad), "%Y-%m-%dT%H:%M:%S.%fZ")
+            lines.append("📅 Аукцион: %s UTC" % dt.strftime("%d.%m.%Y %H:%M"))
+        except (ValueError, TypeError, OSError):
+            lines.append("📅 Аукцион: %s" % lot["auction_date"])
     lines.append("")
     lines.append('<a href="%s">🔗 Лот #%s на Copart</a>' % (lot["url"], lot["id"]))
     tags = []
@@ -246,23 +259,42 @@ def build_caption(lot):
     lines.append("@easyautoimport")
     return "\n".join(lines)
 
-def build_keyboard(lot_id):
-    return {
-        "inline_keyboard": [
-            [
-                {"text": "📩 Написать менеджеру", "url": MANAGER_PHONE},
-                {"text": "📊 Рассчитать под ключ", "url": CALCULATOR_URL},
-            ],
-            [
-                {"text": "❤️ Сохранить", "callback_data": "save_%s" % lot_id},
-            ],
-        ]
-    }
+def build_calendar_url(lot):
+    ad = lot.get("auction_date")
+    if not ad:
+        return None
+    try:
+        if isinstance(ad, (int, float)):
+            dt = datetime.utcfromtimestamp(ad / 1000)
+        else:
+            dt = datetime.strptime(str(ad), "%Y-%m-%dT%H:%M:%S.%fZ")
+        date_str = dt.strftime("%Y%m%dT%H%M%SZ")
+        title = quote("Аукцион Copart: %s" % lot["title"])
+        details = quote("Лот #%s\n%s" % (lot["id"], lot["url"]))
+        return ("https://calendar.google.com/calendar/render?action=TEMPLATE"
+                "&text=%s&dates=%s/%s&details=%s" % (title, date_str, date_str, details))
+    except (ValueError, TypeError, OSError):
+        return None
+
+
+def build_keyboard(lot):
+    lot_id = lot["id"]
+    rows = [
+        [
+            {"text": "📩 Написать менеджеру", "url": MANAGER_PHONE},
+            {"text": "📊 Рассчитать под ключ", "url": CALCULATOR_URL},
+        ],
+    ]
+    cal_url = build_calendar_url(lot)
+    if cal_url:
+        rows.append([{"text": "📅 Добавить в календарь", "url": cal_url}])
+    rows.append([{"text": "❤️ Сохранить", "callback_data": "save_%s" % lot_id}])
+    return {"inline_keyboard": rows}
 
 def send_post(lot):
     caption     = build_caption(lot)
     photo_bytes = download_photo(lot.get("photos", []))
-    keyboard    = build_keyboard(lot["id"])
+    keyboard    = build_keyboard(lot)
     kb_json     = json.dumps(keyboard, ensure_ascii=False)
 
     if photo_bytes:
