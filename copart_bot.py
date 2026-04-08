@@ -259,9 +259,6 @@ def build_caption(lot):
     lines.append("@easyautoimport")
     return "\n".join(lines)
 
-APP_HOST = "https://easyautoimport-production.up.railway.app"
-
-
 def build_calendar_url(lot):
     ad = lot.get("auction_date")
     if not ad:
@@ -275,7 +272,9 @@ def build_calendar_url(lot):
         end_dt = datetime.utcfromtimestamp(dt.timestamp() + 3600)
         end_str = end_dt.strftime("%Y%m%dT%H%M%SZ")
         title = quote("Аукцион Copart: %s" % lot["title"])
-        return "%s/cal?t=%s&d=%s&de=%s&l=%s" % (APP_HOST, title, date_str, end_str, lot["id"])
+        details = quote("Лот #%s\n%s" % (lot["id"], lot["url"]))
+        return ("https://calendar.google.com/calendar/render?action=TEMPLATE"
+                "&text=%s&dates=%s/%s&details=%s" % (title, date_str, end_str, details))
     except (ValueError, TypeError, OSError):
         return None
 
