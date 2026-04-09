@@ -1000,12 +1000,12 @@ body {
 .telegram__previews {
   display: flex;
   justify-content: center;
-  gap: 16px;
+  gap: 20px;
   margin: 32px auto;
-  max-width: 520px;
+  max-width: 700px;
 }
 .telegram__previews img {
-  width: 48%;
+  width: 280px;
   border-radius: 12px;
   box-shadow: 0 8px 32px rgba(0,0,0,0.4);
 }
