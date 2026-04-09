@@ -959,7 +959,7 @@ body {
   border-bottom: 1px solid rgba(255,255,255,0.06);
 }
 .telegram__wrap {
-  max-width: 600px;
+  max-width: 800px;
   margin: 0 auto;
 }
 .telegram__icon {
