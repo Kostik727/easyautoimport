@@ -997,12 +997,15 @@ body {
   background: #229ED9;
   transform: translateY(-2px);
 }
-.telegram__preview {
+.telegram__previews {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
   margin: 32px auto;
-  max-width: 360px;
+  max-width: 520px;
 }
-.telegram__preview img {
-  width: 100%;
+.telegram__previews img {
+  width: 48%;
   border-radius: 12px;
   box-shadow: 0 8px 32px rgba(0,0,0,0.4);
 }
@@ -1106,6 +1109,8 @@ body {
   /* TELEGRAM */
   .telegram { padding: 60px 16px; }
   .telegram h2 { font-size: 24px; }
+  .telegram__previews { flex-direction: row; max-width: 340px; gap: 10px; }
+  .telegram__previews img { width: 48%; }
 
   /* CTA */
   .cta { padding: 60px 16px; }
