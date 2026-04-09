@@ -17,19 +17,16 @@ SEEN_FILE  = "seen_lots.json"
 MAX_POSTS  = 10
 MIN_YEAR   = 2018
 
-PRIORITY_MAKES = {
-    "BMW", "TOYOTA", "LEXUS", "SUBARU",
-    "MERCEDES-BENZ", "FORD", "DODGE"
-}
+MAX_POST_COUNT = 2  # max times to post the same lot
+
+PRIORITY_MAKES = {"TOYOTA"}
 
 QUERY_TERMS = [
-    "BMW run and drive",
-    "Toyota run and drive",
-    "Lexus run and drive",
-    "Subaru run and drive",
-    "Mercedes-Benz run and drive",
-    "Ford run and drive",
-    "Dodge run and drive",
+    "Toyota Camry run and drive",
+    "Toyota Corolla run and drive",
+    "Toyota Highlander run and drive",
+    "Toyota Grand Highlander run and drive",
+    "Toyota 4Runner run and drive",
 ]
 
 logging.basicConfig(
@@ -55,16 +52,20 @@ HEADERS = {
 }
 
 
-def load_seen() -> set:
+def load_seen() -> dict:
     if os.path.exists(SEEN_FILE):
         with open(SEEN_FILE, "r", encoding="utf-8") as f:
-            return set(json.load(f))
-    return set()
+            data = json.load(f)
+            # migrate from old list format
+            if isinstance(data, list):
+                return {lot_id: MAX_POST_COUNT for lot_id in data}
+            return data
+    return {}
 
 
-def save_seen(seen: set):
+def save_seen(seen: dict):
     with open(SEEN_FILE, "w", encoding="utf-8") as f:
-        json.dump(list(seen), f, ensure_ascii=False, indent=2)
+        json.dump(seen, f, ensure_ascii=False, indent=2)
 
 
 def build_photo_urls(tims: str) -> list:
@@ -346,15 +347,16 @@ def run_scraper():
 
     posted = 0
     for lot in lots:
-        if lot["id"] in seen:
-            log.info("Already posted: %s", lot["id"])
+        count = seen.get(lot["id"], 0)
+        if count >= MAX_POST_COUNT:
+            log.info("Already posted %dx: %s", count, lot["id"])
             continue
 
-        log.info("Posting lot %s - %s", lot["id"], lot["title"])
+        log.info("Posting lot %s - %s (post #%d)", lot["id"], lot["title"], count + 1)
         success = send_post(lot)
 
         if success:
-            seen.add(lot["id"])
+            seen[lot["id"]] = count + 1
             save_seen(seen)
             posted += 1
             log.info("Published OK (%d/%d)", posted, len(lots))
