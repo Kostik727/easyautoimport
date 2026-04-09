@@ -950,6 +950,54 @@ body {
 .footer__social { color: var(--text-muted); text-decoration: none; font-size: 14px; transition: color 0.2s; }
 .footer__social:hover { color: #fff; }
 
+/* ===== TELEGRAM ===== */
+.telegram {
+  padding: 80px 24px;
+  text-align: center;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  border-top: 1px solid rgba(255,255,255,0.06);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.telegram__wrap {
+  max-width: 600px;
+  margin: 0 auto;
+}
+.telegram__icon {
+  margin-bottom: 24px;
+}
+.telegram h2 {
+  font-size: 32px;
+  font-weight: 800;
+  margin-bottom: 16px;
+  color: #fff;
+}
+.telegram p {
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--text-muted);
+  margin-bottom: 32px;
+}
+.telegram p strong {
+  color: #fff;
+}
+.btn--telegram {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 32px;
+  background: #2AABEE;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  border-radius: 12px;
+  text-decoration: none;
+  transition: background 0.2s, transform 0.2s;
+}
+.btn--telegram:hover {
+  background: #229ED9;
+  transform: translateY(-2px);
+}
+
 /* ===== RESPONSIVE ===== */
 @media (max-width: 1100px) {
   .pain__grid { grid-template-columns: repeat(2, 1fr); }
@@ -1045,6 +1093,10 @@ body {
   .insurance { padding: 60px 16px; }
   .insurance__grid { grid-template-columns: 1fr; }
   .ins-card { padding: 28px 22px; }
+
+  /* TELEGRAM */
+  .telegram { padding: 60px 16px; }
+  .telegram h2 { font-size: 24px; }
 
   /* CTA */
   .cta { padding: 60px 16px; }
