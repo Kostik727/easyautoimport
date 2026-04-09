@@ -14,12 +14,20 @@ from urllib.parse import quote
 BOT_TOKEN  = os.environ.get("BOT_TOKEN", "8435399634:AAHSjsvlP3LSGo-6TKg9v777dfC-iFct6bk")
 CHANNEL_ID = "@easyautoimport"
 SEEN_FILE  = "seen_lots.json"
-MAX_POSTS  = 10
-MIN_YEAR   = 2018
+MAX_POSTS  = 20
+MIN_YEAR   = 2020
 
 MAX_POST_COUNT = 2  # max times to post the same lot
+MAX_PER_MODEL  = 2  # max lots per model in a single run
 
 PRIORITY_MAKES = {"TOYOTA"}
+
+ALLOWED_MODELS = [
+    "CAMRY", "COROLLA", "HIGHLANDER",
+    "GRAND HIGHLANDER", "4RUNNER",
+    "RAV4", "TACOMA", "TUNDRA",
+    "SIENNA", "VENZA", "SUPRA",
+]
 
 QUERY_TERMS = [
     "Toyota Camry run and drive",
@@ -27,6 +35,12 @@ QUERY_TERMS = [
     "Toyota Highlander run and drive",
     "Toyota Grand Highlander run and drive",
     "Toyota 4Runner run and drive",
+    "Toyota RAV4 run and drive",
+    "Toyota Tacoma run and drive",
+    "Toyota Tundra run and drive",
+    "Toyota Sienna run and drive",
+    "Toyota Venza run and drive",
+    "Toyota Supra run and drive",
 ]
 
 logging.basicConfig(
@@ -107,7 +121,7 @@ def fetch_lots() -> list:
     for query_str in QUERY_TERMS:
         log.info("Searching: %s", query_str)
 
-        for page in range(0, 5):
+        for page in range(0, 10):
             payload = {
                 "query": [query_str],
                 "filter": {},
@@ -165,6 +179,10 @@ def fetch_lots() -> list:
                     model = (item.get("lm")  or item.get("md") or "").strip()
 
                     if make not in PRIORITY_MAKES:
+                        continue
+
+                    model_upper = model.upper()
+                    if not any(am in model_upper for am in ALLOWED_MODELS):
                         continue
 
                     damage = (item.get("dd") or "").strip()
@@ -346,10 +364,17 @@ def run_scraper():
         return 0
 
     posted = 0
+    model_counts = {}  # track per-model posts this run
     for lot in lots:
         count = seen.get(lot["id"], 0)
         if count >= MAX_POST_COUNT:
             log.info("Already posted %dx: %s", count, lot["id"])
+            continue
+
+        model_key = lot.get("model", "").upper()
+        mc = model_counts.get(model_key, 0)
+        if mc >= MAX_PER_MODEL:
+            log.info("Model limit reached for %s, skip %s", model_key, lot["id"])
             continue
 
         log.info("Posting lot %s - %s (post #%d)", lot["id"], lot["title"], count + 1)
@@ -358,6 +383,7 @@ def run_scraper():
         if success:
             seen[lot["id"]] = count + 1
             save_seen(seen)
+            model_counts[model_key] = mc + 1
             posted += 1
             log.info("Published OK (%d/%d)", posted, len(lots))
             time.sleep(5)
