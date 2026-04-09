@@ -14,26 +14,35 @@ from urllib.parse import quote
 BOT_TOKEN  = os.environ.get("BOT_TOKEN", "8435399634:AAHSjsvlP3LSGo-6TKg9v777dfC-iFct6bk")
 CHANNEL_ID = "@easyautoimport"
 SEEN_FILE  = "seen_lots.json"
-MAX_POSTS  = 20
+MAX_POSTS  = 1   # post only 1 lot per run
 MIN_YEAR   = 2020
 
 COOLDOWN_HOURS = 24  # don't repost same lot within this period
-MAX_PER_MODEL  = 2   # max lots per model in a single run
 
 PRIORITY_MAKES = {
-    "ACURA", "AUDI", "BMW", "CADILLAC", "CHEVROLET",
-    "DODGE", "FORD", "GENESIS", "GMC", "HONDA",
+    "LEXUS", "TOYOTA", "BMW", "FORD",
+    "ACURA", "AUDI", "CADILLAC", "CHEVROLET",
+    "DODGE", "GENESIS", "GMC", "HONDA",
     "HYUNDAI", "INFINITI", "JEEP", "KIA", "LAND ROVER",
-    "LEXUS", "LINCOLN", "MAZDA", "MERCEDES-BENZ",
+    "LINCOLN", "MAZDA", "MERCEDES-BENZ",
     "MITSUBISHI", "NISSAN", "PORSCHE", "RAM", "SUBARU",
-    "TESLA", "TOYOTA", "VOLKSWAGEN", "VOLVO",
+    "TESLA", "VOLKSWAGEN", "VOLVO",
 }
+
+# Priority order for sorting — first brands get posted first
+BRAND_PRIORITY = ["LEXUS", "TOYOTA", "BMW", "FORD"]
 
 # No model filter — accept all models from priority makes
 ALLOWED_MODELS = None
 
 QUERY_TERMS = [
-    # Toyota
+    # Priority: Lexus
+    "Lexus RX run and drive",
+    "Lexus NX run and drive",
+    "Lexus ES run and drive",
+    "Lexus GX run and drive",
+    "Lexus LX run and drive",
+    # Priority: Toyota
     "Toyota Camry run and drive",
     "Toyota Corolla run and drive",
     "Toyota RAV4 run and drive",
@@ -45,7 +54,19 @@ QUERY_TERMS = [
     "Toyota Prius run and drive",
     "Toyota Sequoia run and drive",
     "Toyota Land Cruiser run and drive",
-    # Hyundai / Kia
+    # Priority: BMW
+    "BMW X5 run and drive",
+    "BMW X3 run and drive",
+    "BMW 3 Series run and drive",
+    "BMW 5 Series run and drive",
+    "BMW X7 run and drive",
+    # Priority: Ford
+    "Ford F-150 run and drive",
+    "Ford Explorer run and drive",
+    "Ford Mustang run and drive",
+    "Ford Bronco run and drive",
+    "Ford Expedition run and drive",
+    # Other
     "Hyundai Tucson run and drive",
     "Hyundai Santa Fe run and drive",
     "Hyundai Sonata run and drive",
@@ -53,88 +74,36 @@ QUERY_TERMS = [
     "Kia Sportage run and drive",
     "Kia Sorento run and drive",
     "Kia Telluride run and drive",
-    "Kia K5 run and drive",
-    # Honda
     "Honda CR-V run and drive",
     "Honda Civic run and drive",
     "Honda Accord run and drive",
     "Honda Pilot run and drive",
-    # BMW
-    "BMW X5 run and drive",
-    "BMW X3 run and drive",
-    "BMW 3 Series run and drive",
-    "BMW 5 Series run and drive",
-    "BMW X7 run and drive",
-    # Mercedes
     "Mercedes-Benz GLE run and drive",
     "Mercedes-Benz GLC run and drive",
-    "Mercedes-Benz C-Class run and drive",
     "Mercedes-Benz E-Class run and drive",
-    "Mercedes-Benz GLS run and drive",
-    # Lexus
-    "Lexus RX run and drive",
-    "Lexus NX run and drive",
-    "Lexus ES run and drive",
-    "Lexus GX run and drive",
-    "Lexus LX run and drive",
-    # Audi
     "Audi Q5 run and drive",
     "Audi Q7 run and drive",
-    "Audi A6 run and drive",
-    # Ford
-    "Ford F-150 run and drive",
-    "Ford Explorer run and drive",
-    "Ford Mustang run and drive",
-    "Ford Bronco run and drive",
-    "Ford Expedition run and drive",
-    # Chevrolet / GMC
     "Chevrolet Tahoe run and drive",
-    "Chevrolet Suburban run and drive",
     "GMC Yukon run and drive",
     "Chevrolet Silverado run and drive",
-    # Jeep
     "Jeep Grand Cherokee run and drive",
     "Jeep Wrangler run and drive",
-    # Dodge / RAM
     "Dodge Durango run and drive",
     "RAM 1500 run and drive",
-    # Cadillac
     "Cadillac Escalade run and drive",
-    # Subaru
     "Subaru Outback run and drive",
     "Subaru Forester run and drive",
-    # Nissan
     "Nissan Rogue run and drive",
     "Nissan Pathfinder run and drive",
-    # Volkswagen
     "Volkswagen Tiguan run and drive",
-    "Volkswagen Atlas run and drive",
-    # Volvo
-    "Volvo XC90 run and drive",
-    "Volvo XC60 run and drive",
-    # Tesla
     "Tesla Model Y run and drive",
     "Tesla Model 3 run and drive",
-    # Porsche
     "Porsche Cayenne run and drive",
-    "Porsche Macan run and drive",
-    # Genesis
     "Genesis GV80 run and drive",
-    "Genesis G80 run and drive",
-    # Land Rover
     "Land Rover Range Rover run and drive",
-    "Land Rover Defender run and drive",
-    # Mazda
     "Mazda CX-5 run and drive",
-    "Mazda CX-9 run and drive",
-    # Lincoln
     "Lincoln Navigator run and drive",
-    # Infiniti
     "Infiniti QX80 run and drive",
-    "Infiniti QX60 run and drive",
-    # Mitsubishi
-    "Mitsubishi Outlander run and drive",
-    # Acura
     "Acura MDX run and drive",
 ]
 
@@ -161,24 +130,87 @@ HEADERS = {
 }
 
 
+BACKUP_CHAT_ID = os.environ.get("BACKUP_CHAT_ID", BOT_TOKEN.split(":")[0])
+
+
 def load_seen() -> dict:
+    # Try local file first
     if os.path.exists(SEEN_FILE):
         with open(SEEN_FILE, "r", encoding="utf-8") as f:
             data = json.load(f)
-            # migrate from old formats (list or count-based)
             if isinstance(data, list):
                 return {lot_id: "2000-01-01T00:00:00" for lot_id in data}
-            # migrate count-based values to old timestamps
             for k, v in data.items():
                 if isinstance(v, int):
                     data[k] = "2000-01-01T00:00:00"
-            return data
+            if data:
+                return data
+
+    # File missing or empty — restore from Telegram backup
+    log.info("Restoring seen_lots from Telegram backup...")
+    try:
+        resp = requests.post(
+            "https://api.telegram.org/bot%s/getChat" % BOT_TOKEN,
+            json={"chat_id": BACKUP_CHAT_ID}, timeout=10
+        )
+        pinned = resp.json().get("result", {}).get("pinned_message", {})
+        doc = pinned.get("document")
+        if doc:
+            file_resp = requests.get(
+                "https://api.telegram.org/bot%s/getFile" % BOT_TOKEN,
+                params={"file_id": doc["file_id"]}, timeout=10
+            )
+            file_path = file_resp.json().get("result", {}).get("file_path", "")
+            if file_path:
+                dl = requests.get(
+                    "https://api.telegram.org/file/bot%s/%s" % (BOT_TOKEN, file_path),
+                    timeout=10
+                )
+                data = dl.json()
+                log.info("Restored %d lots from backup", len(data))
+                save_seen(data)
+                return data
+    except Exception as e:
+        log.warning("Could not restore from backup: %s", e)
+
     return {}
 
 
 def save_seen(seen: dict):
     with open(SEEN_FILE, "w", encoding="utf-8") as f:
         json.dump(seen, f, ensure_ascii=False, indent=2)
+
+
+def backup_seen(seen: dict):
+    """Upload seen_lots.json to bot's own chat as pinned document."""
+    try:
+        data = json.dumps(seen, ensure_ascii=False, indent=2).encode("utf-8")
+        resp = requests.post(
+            "https://api.telegram.org/bot%s/sendDocument" % BOT_TOKEN,
+            data={"chat_id": BACKUP_CHAT_ID},
+            files={"document": ("seen_lots.json", data, "application/json")},
+            timeout=15,
+        )
+        if resp.status_code == 200:
+            msg_id = resp.json().get("result", {}).get("message_id")
+            if msg_id:
+                requests.post(
+                    "https://api.telegram.org/bot%s/pinChatMessage" % BOT_TOKEN,
+                    json={"chat_id": BACKUP_CHAT_ID, "message_id": msg_id,
+                          "disable_notification": True},
+                    timeout=10,
+                )
+            log.info("Backed up seen_lots (%d lots)", len(seen))
+    except Exception as e:
+        log.warning("Backup failed: %s", e)
+
+
+def _hours_ago(timestamp_str, now):
+    try:
+        dt = datetime.strptime(timestamp_str, "%Y-%m-%dT%H:%M:%S")
+        return (now - dt).total_seconds() / 3600
+    except (ValueError, TypeError):
+        return 999
 
 
 def build_photo_urls(tims: str) -> list:
@@ -328,6 +360,15 @@ def fetch_lots() -> list:
         if len(lots) >= MAX_POSTS:
             break
 
+    # Sort by brand priority — Lexus, Toyota, BMW, Ford first
+    def brand_sort_key(lot):
+        make = lot.get("make", "").upper()
+        try:
+            return BRAND_PRIORITY.index(make)
+        except ValueError:
+            return len(BRAND_PRIORITY)
+
+    lots.sort(key=brand_sort_key)
     log.info("Total matching lots: %d", len(lots))
     return lots
 
@@ -470,26 +511,26 @@ def run_scraper():
         log.info("No matching lots found.")
         return 0
 
-    posted = 0
+    # Clean old entries (>48h) to keep file small
     now = datetime.utcnow()
-    model_counts = {}  # track per-model posts this run
+    expired = [k for k, v in seen.items() if _hours_ago(v, now) > 48]
+    for k in expired:
+        del seen[k]
+    if expired:
+        save_seen(seen)
+        log.info("Cleaned %d expired entries from seen_lots", len(expired))
+
+    posted = 0
     for lot in lots:
+        if posted >= MAX_POSTS:
+            break
+
         last_posted = seen.get(lot["id"])
         if last_posted:
-            try:
-                last_dt = datetime.strptime(last_posted, "%Y-%m-%dT%H:%M:%S")
-                hours_ago = (now - last_dt).total_seconds() / 3600
-                if hours_ago < COOLDOWN_HOURS:
-                    log.info("Posted %.0fh ago, skip: %s", hours_ago, lot["id"])
-                    continue
-            except (ValueError, TypeError):
-                pass
-
-        model_key = lot.get("model", "").upper()
-        mc = model_counts.get(model_key, 0)
-        if mc >= MAX_PER_MODEL:
-            log.info("Model limit reached for %s, skip %s", model_key, lot["id"])
-            continue
+            hours = _hours_ago(last_posted, now)
+            if hours < COOLDOWN_HOURS:
+                log.info("Posted %.0fh ago, skip: %s", hours, lot["id"])
+                continue
 
         log.info("Posting lot %s - %s", lot["id"], lot["title"])
         success = send_post(lot)
@@ -497,13 +538,13 @@ def run_scraper():
         if success:
             seen[lot["id"]] = now.strftime("%Y-%m-%dT%H:%M:%S")
             save_seen(seen)
-            model_counts[model_key] = mc + 1
             posted += 1
-            log.info("Published OK (%d/%d)", posted, len(lots))
-            time.sleep(5)
+            log.info("Published OK (%d)", posted)
         else:
             log.warning("Failed to publish lot %s", lot["id"])
 
+    if posted > 0:
+        backup_seen(seen)
     log.info("Scraper done: posted %d new lots", posted)
     return posted
 
