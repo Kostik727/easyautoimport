@@ -8,7 +8,7 @@ import json
 import time
 import logging
 import requests
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from urllib.parse import quote
 
 BOT_TOKEN  = os.environ.get("BOT_TOKEN", "8435399634:AAHSjsvlP3LSGo-6TKg9v777dfC-iFct6bk")
@@ -239,10 +239,11 @@ def build_caption(lot):
         try:
             ad = lot["auction_date"]
             if isinstance(ad, (int, float)):
-                dt = datetime.utcfromtimestamp(ad / 1000)
+                dt_utc = datetime.fromtimestamp(ad / 1000, tz=timezone.utc)
             else:
-                dt = datetime.strptime(str(ad), "%Y-%m-%dT%H:%M:%S.%fZ")
-            lines.append("📅 Аукцион: %s UTC" % dt.strftime("%d.%m.%Y %H:%M"))
+                dt_utc = datetime.strptime(str(ad), "%Y-%m-%dT%H:%M:%S.%fZ").replace(tzinfo=timezone.utc)
+            dt_kz = dt_utc + timedelta(hours=5)
+            lines.append("📅 Аукцион: %s (Астана)" % dt_kz.strftime("%d.%m.%Y %H:%M"))
         except (ValueError, TypeError, OSError):
             lines.append("📅 Аукцион: %s" % lot["auction_date"])
     lines.append("")
