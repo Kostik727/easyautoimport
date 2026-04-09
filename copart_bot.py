@@ -399,11 +399,18 @@ def build_calendar_url(lot):
         return None
 
 
+def build_calc_url(lot):
+    text = "Здравствуйте, меня интересует этот автомобиль!\n\n%s\nЛот #%s\n%s" % (
+        lot["title"], lot["id"], lot["url"]
+    )
+    return "https://t.me/+77476899519?text=%s" % quote(text)
+
+
 def build_keyboard(lot):
     lot_id = lot["id"]
     rows = [
         [{"text": "📩 Написать менеджеру", "url": MANAGER_PHONE}],
-        [{"text": "📊 Рассчитать под ключ", "url": CALCULATOR_URL}],
+        [{"text": "📊 Рассчитать под ключ", "url": build_calc_url(lot)}],
     ]
     cal_url = build_calendar_url(lot)
     if cal_url:
