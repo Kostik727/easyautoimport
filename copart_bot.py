@@ -20,35 +20,122 @@ MIN_YEAR   = 2020
 COOLDOWN_HOURS = 24  # don't repost same lot within this period
 MAX_PER_MODEL  = 2   # max lots per model in a single run
 
-PRIORITY_MAKES = {"TOYOTA"}
+PRIORITY_MAKES = {
+    "ACURA", "AUDI", "BMW", "CADILLAC", "CHEVROLET",
+    "DODGE", "FORD", "GENESIS", "GMC", "HONDA",
+    "HYUNDAI", "INFINITI", "JEEP", "KIA", "LAND ROVER",
+    "LEXUS", "LINCOLN", "MAZDA", "MERCEDES-BENZ",
+    "MITSUBISHI", "NISSAN", "PORSCHE", "RAM", "SUBARU",
+    "TESLA", "TOYOTA", "VOLKSWAGEN", "VOLVO",
+}
 
-ALLOWED_MODELS = [
-    "CAMRY", "COROLLA", "HIGHLANDER",
-    "GRAND HIGHLANDER", "4RUNNER",
-    "RAV4", "TACOMA", "TUNDRA",
-    "SIENNA", "VENZA", "SUPRA",
-    "SEQUOIA", "LAND CRUISER", "CROWN",
-    "PRIUS", "C-HR", "BZ4X",
-]
+# No model filter — accept all models from priority makes
+ALLOWED_MODELS = None
 
 QUERY_TERMS = [
+    # Toyota
     "Toyota Camry run and drive",
     "Toyota Corolla run and drive",
-    "Toyota Highlander run and drive",
-    "Toyota Grand Highlander run and drive",
-    "Toyota 4Runner run and drive",
     "Toyota RAV4 run and drive",
+    "Toyota Highlander run and drive",
+    "Toyota 4Runner run and drive",
     "Toyota Tacoma run and drive",
     "Toyota Tundra run and drive",
     "Toyota Sienna run and drive",
-    "Toyota Venza run and drive",
-    "Toyota Supra run and drive",
+    "Toyota Prius run and drive",
     "Toyota Sequoia run and drive",
     "Toyota Land Cruiser run and drive",
-    "Toyota Crown run and drive",
-    "Toyota Prius run and drive",
-    "Toyota C-HR run and drive",
-    "Toyota bZ4X run and drive",
+    # Hyundai / Kia
+    "Hyundai Tucson run and drive",
+    "Hyundai Santa Fe run and drive",
+    "Hyundai Sonata run and drive",
+    "Hyundai Palisade run and drive",
+    "Kia Sportage run and drive",
+    "Kia Sorento run and drive",
+    "Kia Telluride run and drive",
+    "Kia K5 run and drive",
+    # Honda
+    "Honda CR-V run and drive",
+    "Honda Civic run and drive",
+    "Honda Accord run and drive",
+    "Honda Pilot run and drive",
+    # BMW
+    "BMW X5 run and drive",
+    "BMW X3 run and drive",
+    "BMW 3 Series run and drive",
+    "BMW 5 Series run and drive",
+    "BMW X7 run and drive",
+    # Mercedes
+    "Mercedes-Benz GLE run and drive",
+    "Mercedes-Benz GLC run and drive",
+    "Mercedes-Benz C-Class run and drive",
+    "Mercedes-Benz E-Class run and drive",
+    "Mercedes-Benz GLS run and drive",
+    # Lexus
+    "Lexus RX run and drive",
+    "Lexus NX run and drive",
+    "Lexus ES run and drive",
+    "Lexus GX run and drive",
+    "Lexus LX run and drive",
+    # Audi
+    "Audi Q5 run and drive",
+    "Audi Q7 run and drive",
+    "Audi A6 run and drive",
+    # Ford
+    "Ford F-150 run and drive",
+    "Ford Explorer run and drive",
+    "Ford Mustang run and drive",
+    "Ford Bronco run and drive",
+    "Ford Expedition run and drive",
+    # Chevrolet / GMC
+    "Chevrolet Tahoe run and drive",
+    "Chevrolet Suburban run and drive",
+    "GMC Yukon run and drive",
+    "Chevrolet Silverado run and drive",
+    # Jeep
+    "Jeep Grand Cherokee run and drive",
+    "Jeep Wrangler run and drive",
+    # Dodge / RAM
+    "Dodge Durango run and drive",
+    "RAM 1500 run and drive",
+    # Cadillac
+    "Cadillac Escalade run and drive",
+    # Subaru
+    "Subaru Outback run and drive",
+    "Subaru Forester run and drive",
+    # Nissan
+    "Nissan Rogue run and drive",
+    "Nissan Pathfinder run and drive",
+    # Volkswagen
+    "Volkswagen Tiguan run and drive",
+    "Volkswagen Atlas run and drive",
+    # Volvo
+    "Volvo XC90 run and drive",
+    "Volvo XC60 run and drive",
+    # Tesla
+    "Tesla Model Y run and drive",
+    "Tesla Model 3 run and drive",
+    # Porsche
+    "Porsche Cayenne run and drive",
+    "Porsche Macan run and drive",
+    # Genesis
+    "Genesis GV80 run and drive",
+    "Genesis G80 run and drive",
+    # Land Rover
+    "Land Rover Range Rover run and drive",
+    "Land Rover Defender run and drive",
+    # Mazda
+    "Mazda CX-5 run and drive",
+    "Mazda CX-9 run and drive",
+    # Lincoln
+    "Lincoln Navigator run and drive",
+    # Infiniti
+    "Infiniti QX80 run and drive",
+    "Infiniti QX60 run and drive",
+    # Mitsubishi
+    "Mitsubishi Outlander run and drive",
+    # Acura
+    "Acura MDX run and drive",
 ]
 
 logging.basicConfig(
@@ -133,7 +220,7 @@ def fetch_lots() -> list:
     for query_str in QUERY_TERMS:
         log.info("Searching: %s", query_str)
 
-        for page in range(0, 10):
+        for page in range(0, 3):
             payload = {
                 "query": [query_str],
                 "filter": {},
@@ -193,9 +280,10 @@ def fetch_lots() -> list:
                     if make not in PRIORITY_MAKES:
                         continue
 
-                    model_upper = model.upper()
-                    if not any(am in model_upper for am in ALLOWED_MODELS):
-                        continue
+                    if ALLOWED_MODELS:
+                        model_upper = model.upper()
+                        if not any(am in model_upper for am in ALLOWED_MODELS):
+                            continue
 
                     damage = (item.get("dd") or "").strip()
                     tims   = item.get("tims", "")

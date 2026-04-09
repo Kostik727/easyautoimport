@@ -17,7 +17,7 @@ from urllib.parse import urlparse, parse_qs
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "8435399634:AAHSjsvlP3LSGo-6TKg9v777dfC-iFct6bk")
 API = "https://api.telegram.org/bot" + BOT_TOKEN
 SAVED_FILE = "saved_lots.json"
-SCRAPE_INTERVAL = 3 * 3600  # every 3 hours
+SCRAPE_INTERVAL = 10 * 60  # every 10 minutes
 
 logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(message)s",
