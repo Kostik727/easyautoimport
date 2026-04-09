@@ -282,10 +282,8 @@ def build_calendar_url(lot):
 def build_keyboard(lot):
     lot_id = lot["id"]
     rows = [
-        [
-            {"text": "📩 Написать менеджеру", "url": MANAGER_PHONE},
-            {"text": "📊 Рассчитать под ключ", "url": CALCULATOR_URL},
-        ],
+        [{"text": "📩 Написать менеджеру", "url": MANAGER_PHONE}],
+        [{"text": "📊 Рассчитать под ключ", "url": CALCULATOR_URL}],
     ]
     cal_url = build_calendar_url(lot)
     if cal_url:
