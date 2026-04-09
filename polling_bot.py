@@ -165,6 +165,8 @@ class CalHandler(BaseHTTPRequestHandler):
 
         if parsed.path in ("/cal", "/cal.ics"):
             self._serve_ics(params)
+        elif parsed.path == "/calc":
+            self._serve_calc(params)
         else:
             self.send_response(404)
             self.end_headers()
@@ -199,6 +201,76 @@ class CalHandler(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Content-Type", "text/calendar; charset=utf-8")
         self.send_header("Content-Disposition", "attachment; filename=auction_%s.ics" % lot)
+        self.send_header("Content-Length", str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
+
+    def _serve_calc(self, params):
+        lot_id = params.get("l", [""])[0]
+        if not lot_id:
+            self.send_response(400)
+            self.end_headers()
+            self.wfile.write(b"Missing lot param")
+            return
+
+        # Load lot from cache
+        lot = {}
+        try:
+            cache_file = os.path.join(os.path.dirname(__file__) or ".", "lot_cache.json")
+            if os.path.exists(cache_file):
+                with open(cache_file, "r", encoding="utf-8") as f:
+                    cache = json.load(f)
+                lot = cache.get(lot_id, {})
+        except Exception:
+            pass
+
+        # Build message text like in channel
+        lines = ["Здравствуйте, меня интересует этот автомобиль!", ""]
+        lines.append("🚗 %s" % lot.get("title", "Лот #%s" % lot_id))
+        lines.append("")
+        if lot.get("price"):
+            lines.append("💰 Текущая ставка: $%s" % lot["price"])
+        if lot.get("damage"):
+            lines.append("🔧 Повреждение: %s" % lot["damage"])
+        if lot.get("odometer"):
+            try:
+                odo_km = int(float(lot["odometer"]) * 1.64)
+                lines.append("📏 Пробег: %s км" % "{:,}".format(odo_km).replace(",", " "))
+            except (ValueError, TypeError):
+                lines.append("📏 Пробег: %s км" % lot["odometer"])
+        if lot.get("engine"):
+            lines.append("⚙️ Двигатель: %s" % lot["engine"])
+        if lot.get("drive"):
+            lines.append("🔄 Привод: %s" % lot["drive"])
+        if lot.get("fuel"):
+            lines.append("⛽ Топливо: %s" % lot["fuel"])
+        if lot.get("color"):
+            lines.append("🎨 Цвет: %s" % lot["color"])
+        if lot.get("vin"):
+            lines.append("🔑 VIN: %s" % lot["vin"])
+        lines.append("")
+        copart_url = lot.get("url", "https://www.copart.com/lot/%s" % lot_id)
+        lines.append("🔗 Лот #%s на Copart" % lot_id)
+        lines.append(copart_url)
+
+        msg_text = "\n".join(lines)
+        from urllib.parse import quote as url_quote
+        tg_url = "https://t.me/+77476899519?text=%s" % url_quote(msg_text)
+
+        # Serve HTML page that redirects to Telegram
+        html = (
+            '<!DOCTYPE html><html><head><meta charset="utf-8">'
+            '<meta name="viewport" content="width=device-width,initial-scale=1">'
+            '<meta http-equiv="refresh" content="0;url=%s">'
+            '<title>Рассчитать под ключ</title>'
+            '</head><body style="font-family:sans-serif;text-align:center;padding:40px;">'
+            '<p>Открываем чат с менеджером...</p>'
+            '<p><a href="%s">Нажмите сюда, если не перенаправило</a></p>'
+            '</body></html>'
+        ) % (tg_url, tg_url)
+        data = html.encode("utf-8")
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
         self.send_header("Content-Length", str(len(data)))
         self.end_headers()
         self.wfile.write(data)

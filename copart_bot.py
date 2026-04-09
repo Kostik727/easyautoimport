@@ -440,11 +440,43 @@ def build_calendar_url(lot):
         return None
 
 
+LOT_CACHE_FILE = "lot_cache.json"
+APP_HOST = "https://easyautoimport-production.up.railway.app"
+
+
+def save_lot_cache(lot):
+    """Save lot data for the /calc endpoint."""
+    try:
+        if os.path.exists(LOT_CACHE_FILE):
+            with open(LOT_CACHE_FILE, "r", encoding="utf-8") as f:
+                cache = json.load(f)
+        else:
+            cache = {}
+        cache[lot["id"]] = {
+            "title": lot["title"],
+            "price": lot.get("price", ""),
+            "damage": lot.get("damage", ""),
+            "odometer": lot.get("odometer", ""),
+            "engine": lot.get("engine", ""),
+            "drive": lot.get("drive", ""),
+            "fuel": lot.get("fuel", ""),
+            "color": lot.get("color", ""),
+            "vin": lot.get("vin", ""),
+            "url": lot.get("url", ""),
+        }
+        # Keep only last 200 lots
+        if len(cache) > 200:
+            keys = sorted(cache.keys())
+            for k in keys[:-200]:
+                del cache[k]
+        with open(LOT_CACHE_FILE, "w", encoding="utf-8") as f:
+            json.dump(cache, f, ensure_ascii=False)
+    except Exception as e:
+        log.warning("lot cache error: %s", e)
+
+
 def build_calc_url(lot):
-    text = "Здравствуйте! Интересует %s, лот #%s\n%s" % (
-        lot["title"], lot["id"], lot["url"]
-    )
-    return "https://t.me/+77476899519?text=%s" % quote(text)
+    return "%s/calc?l=%s" % (APP_HOST, lot["id"])
 
 
 def build_keyboard(lot):
@@ -533,6 +565,7 @@ def run_scraper():
                 continue
 
         log.info("Posting lot %s - %s", lot["id"], lot["title"])
+        save_lot_cache(lot)
         success = send_post(lot)
 
         if success:
