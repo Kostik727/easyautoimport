@@ -17,8 +17,8 @@ SEEN_FILE  = "seen_lots.json"
 MAX_POSTS  = 20
 MIN_YEAR   = 2020
 
-MAX_POST_COUNT = 2  # max times to post the same lot
-MAX_PER_MODEL  = 2  # max lots per model in a single run
+COOLDOWN_HOURS = 24  # don't repost same lot within this period
+MAX_PER_MODEL  = 2   # max lots per model in a single run
 
 PRIORITY_MAKES = {"TOYOTA"}
 
@@ -27,6 +27,8 @@ ALLOWED_MODELS = [
     "GRAND HIGHLANDER", "4RUNNER",
     "RAV4", "TACOMA", "TUNDRA",
     "SIENNA", "VENZA", "SUPRA",
+    "SEQUOIA", "LAND CRUISER", "CROWN",
+    "PRIUS", "C-HR", "BZ4X",
 ]
 
 QUERY_TERMS = [
@@ -41,6 +43,12 @@ QUERY_TERMS = [
     "Toyota Sienna run and drive",
     "Toyota Venza run and drive",
     "Toyota Supra run and drive",
+    "Toyota Sequoia run and drive",
+    "Toyota Land Cruiser run and drive",
+    "Toyota Crown run and drive",
+    "Toyota Prius run and drive",
+    "Toyota C-HR run and drive",
+    "Toyota bZ4X run and drive",
 ]
 
 logging.basicConfig(
@@ -70,9 +78,13 @@ def load_seen() -> dict:
     if os.path.exists(SEEN_FILE):
         with open(SEEN_FILE, "r", encoding="utf-8") as f:
             data = json.load(f)
-            # migrate from old list format
+            # migrate from old formats (list or count-based)
             if isinstance(data, list):
-                return {lot_id: MAX_POST_COUNT for lot_id in data}
+                return {lot_id: "2000-01-01T00:00:00" for lot_id in data}
+            # migrate count-based values to old timestamps
+            for k, v in data.items():
+                if isinstance(v, int):
+                    data[k] = "2000-01-01T00:00:00"
             return data
     return {}
 
@@ -364,12 +376,19 @@ def run_scraper():
         return 0
 
     posted = 0
+    now = datetime.utcnow()
     model_counts = {}  # track per-model posts this run
     for lot in lots:
-        count = seen.get(lot["id"], 0)
-        if count >= MAX_POST_COUNT:
-            log.info("Already posted %dx: %s", count, lot["id"])
-            continue
+        last_posted = seen.get(lot["id"])
+        if last_posted:
+            try:
+                last_dt = datetime.strptime(last_posted, "%Y-%m-%dT%H:%M:%S")
+                hours_ago = (now - last_dt).total_seconds() / 3600
+                if hours_ago < COOLDOWN_HOURS:
+                    log.info("Posted %.0fh ago, skip: %s", hours_ago, lot["id"])
+                    continue
+            except (ValueError, TypeError):
+                pass
 
         model_key = lot.get("model", "").upper()
         mc = model_counts.get(model_key, 0)
@@ -377,11 +396,11 @@ def run_scraper():
             log.info("Model limit reached for %s, skip %s", model_key, lot["id"])
             continue
 
-        log.info("Posting lot %s - %s (post #%d)", lot["id"], lot["title"], count + 1)
+        log.info("Posting lot %s - %s", lot["id"], lot["title"])
         success = send_post(lot)
 
         if success:
-            seen[lot["id"]] = count + 1
+            seen[lot["id"]] = now.strftime("%Y-%m-%dT%H:%M:%S")
             save_seen(seen)
             model_counts[model_key] = mc + 1
             posted += 1
