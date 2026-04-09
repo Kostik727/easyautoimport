@@ -399,38 +399,11 @@ def build_calendar_url(lot):
         return None
 
 
-def build_calc_text(lot):
-    lines = ["Здравствуйте, меня интересует этот автомобиль!", ""]
-    lines.append("🚗 %s" % lot["title"])
-    lines.append("")
-    if lot.get("price"):
-        lines.append("💰 Текущая ставка: $%s" % lot["price"])
-    if lot.get("damage"):
-        lines.append("🔧 Повреждение: %s" % lot["damage"])
-    if lot.get("odometer"):
-        try:
-            odo_km = int(float(lot["odometer"]) * 1.64)
-            lines.append("📏 Пробег: %s км" % "{:,}".format(odo_km).replace(",", " "))
-        except (ValueError, TypeError):
-            lines.append("📏 Пробег: %s км" % lot["odometer"])
-    if lot.get("engine"):
-        lines.append("⚙️ Двигатель: %s" % lot["engine"])
-    if lot.get("drive"):
-        lines.append("🔄 Привод: %s" % lot["drive"])
-    if lot.get("fuel"):
-        lines.append("⛽ Топливо: %s" % lot["fuel"])
-    if lot.get("color"):
-        lines.append("🎨 Цвет: %s" % lot["color"])
-    if lot.get("vin"):
-        lines.append("🔑 VIN: %s" % lot["vin"])
-    lines.append("")
-    lines.append("🔗 Лот #%s на Copart" % lot["id"])
-    lines.append(lot["url"])
-    return "\n".join(lines)
-
-
 def build_calc_url(lot):
-    return "https://t.me/+77476899519?text=%s" % quote(build_calc_text(lot))
+    text = "Здравствуйте! Интересует %s, лот #%s\n%s" % (
+        lot["title"], lot["id"], lot["url"]
+    )
+    return "https://t.me/+77476899519?text=%s" % quote(text)
 
 
 def build_keyboard(lot):
