@@ -18,7 +18,7 @@ from urllib.parse import quote
 BOT_TOKEN  = os.environ.get("BOT_TOKEN", "8435399634:AAHSjsvlP3LSGo-6TKg9v777dfC-iFct6bk")
 SEEN_FILE  = "seen_lots.json"
 MAX_POSTS  = 10  # post up to 10 lots per channel per run (3 runs/day)
-MIN_YEAR   = 2020
+MIN_YEAR   = 2018
 
 COOLDOWN_HOURS = 6  # don't repost same lot within this period
 
@@ -32,33 +32,20 @@ CHANNELS = [
                   "MAZDA", "SUBARU", "MITSUBISHI"},
         "brand_priority": ["LEXUS", "TOYOTA", "HONDA", "NISSAN"],
         "queries": [
-            "Lexus RX run and drive",
-            "Lexus NX run and drive",
-            "Lexus ES run and drive",
-            "Lexus GX run and drive",
-            "Lexus LX run and drive",
-            "Toyota Camry run and drive",
-            "Toyota Corolla run and drive",
-            "Toyota RAV4 run and drive",
-            "Toyota Highlander run and drive",
-            "Toyota 4Runner run and drive",
-            "Toyota Tacoma run and drive",
-            "Toyota Tundra run and drive",
-            "Toyota Sienna run and drive",
-            "Toyota Prius run and drive",
-            "Toyota Sequoia run and drive",
-            "Toyota Land Cruiser run and drive",
-            "Honda CR-V run and drive",
-            "Honda Civic run and drive",
-            "Honda Accord run and drive",
-            "Honda Pilot run and drive",
-            "Acura MDX run and drive",
-            "Nissan Rogue run and drive",
-            "Nissan Pathfinder run and drive",
-            "Infiniti QX80 run and drive",
-            "Mazda CX-5 run and drive",
-            "Subaru Outback run and drive",
-            "Subaru Forester run and drive",
+            # Broad
+            "Lexus", "Toyota", "Honda", "Nissan", "Mazda", "Subaru",
+            # Lexus
+            "Lexus RX", "Lexus NX", "Lexus ES", "Lexus GX", "Lexus LX",
+            # Toyota
+            "Toyota Camry", "Toyota Corolla", "Toyota RAV4", "Toyota Highlander",
+            "Toyota 4Runner", "Toyota Tacoma", "Toyota Tundra", "Toyota Sienna",
+            "Toyota Prius", "Toyota Sequoia", "Toyota Land Cruiser",
+            # Honda
+            "Honda CR-V", "Honda Civic", "Honda Accord", "Honda Pilot",
+            # Other
+            "Acura MDX", "Nissan Rogue", "Nissan Pathfinder",
+            "Infiniti QX80", "Mazda CX-5",
+            "Subaru Outback", "Subaru Forester",
         ],
     },
     {
@@ -67,18 +54,26 @@ CHANNELS = [
         "makes": {"BMW", "MERCEDES-BENZ", "AUDI", "VOLKSWAGEN", "PORSCHE"},
         "brand_priority": ["BMW", "MERCEDES-BENZ", "AUDI", "PORSCHE"],
         "queries": [
-            "BMW X5 run and drive",
-            "BMW X3 run and drive",
-            "BMW 3 Series run and drive",
-            "BMW 5 Series run and drive",
-            "BMW X7 run and drive",
-            "Mercedes-Benz GLE run and drive",
-            "Mercedes-Benz GLC run and drive",
-            "Mercedes-Benz E-Class run and drive",
-            "Audi Q5 run and drive",
-            "Audi Q7 run and drive",
-            "Volkswagen Tiguan run and drive",
-            "Porsche Cayenne run and drive",
+            # Broad searches (best results)
+            "BMW",
+            "Mercedes-Benz",
+            "Audi",
+            "Volkswagen",
+            "Porsche",
+            # BMW models
+            "BMW X5", "BMW X3", "BMW X7", "BMW X1",
+            "BMW 3 Series", "BMW 5 Series", "BMW 7 Series",
+            "BMW M3", "BMW M5", "BMW iX", "BMW i4",
+            # Mercedes models
+            "Mercedes-Benz GLE", "Mercedes-Benz GLC", "Mercedes-Benz GLS",
+            "Mercedes-Benz E-Class", "Mercedes-Benz C-Class", "Mercedes-Benz S-Class",
+            "Mercedes-Benz CLA", "Mercedes-Benz GLB", "Mercedes-Benz AMG",
+            # Audi models
+            "Audi Q5", "Audi Q7", "Audi Q3", "Audi Q8",
+            "Audi A4", "Audi A6", "Audi e-tron",
+            # VW / Porsche
+            "Volkswagen Tiguan", "Volkswagen Atlas", "Volkswagen Jetta",
+            "Porsche Cayenne", "Porsche Macan", "Porsche Taycan", "Porsche 911",
         ],
     },
     {
@@ -88,22 +83,20 @@ CHANNELS = [
                   "CADILLAC", "LINCOLN", "TESLA"},
         "brand_priority": ["FORD", "TESLA", "CHEVROLET", "JEEP"],
         "queries": [
-            "Ford F-150 run and drive",
-            "Ford Explorer run and drive",
-            "Ford Mustang run and drive",
-            "Ford Bronco run and drive",
-            "Ford Expedition run and drive",
-            "Chevrolet Tahoe run and drive",
-            "Chevrolet Silverado run and drive",
-            "GMC Yukon run and drive",
-            "Jeep Grand Cherokee run and drive",
-            "Jeep Wrangler run and drive",
-            "Dodge Durango run and drive",
-            "RAM 1500 run and drive",
-            "Cadillac Escalade run and drive",
-            "Lincoln Navigator run and drive",
-            "Tesla Model Y run and drive",
-            "Tesla Model 3 run and drive",
+            # Broad
+            "Ford", "Chevrolet", "Tesla", "Jeep", "Dodge", "GMC",
+            # Ford
+            "Ford F-150", "Ford Explorer", "Ford Mustang",
+            "Ford Bronco", "Ford Expedition", "Ford Escape",
+            # Chevrolet / GMC
+            "Chevrolet Tahoe", "Chevrolet Silverado", "Chevrolet Camaro",
+            "GMC Yukon", "GMC Sierra",
+            # Other
+            "Jeep Grand Cherokee", "Jeep Wrangler",
+            "Dodge Durango", "Dodge Charger", "Dodge Challenger",
+            "RAM 1500",
+            "Cadillac Escalade", "Lincoln Navigator",
+            "Tesla Model Y", "Tesla Model 3", "Tesla Model X",
         ],
     },
     {
@@ -112,14 +105,16 @@ CHANNELS = [
         "makes": {"HYUNDAI", "KIA", "GENESIS"},
         "brand_priority": ["HYUNDAI", "KIA", "GENESIS"],
         "queries": [
-            "Hyundai Tucson run and drive",
-            "Hyundai Santa Fe run and drive",
-            "Hyundai Sonata run and drive",
-            "Hyundai Palisade run and drive",
-            "Kia Sportage run and drive",
-            "Kia Sorento run and drive",
-            "Kia Telluride run and drive",
-            "Genesis GV80 run and drive",
+            # Broad
+            "Hyundai", "Kia", "Genesis",
+            # Hyundai
+            "Hyundai Tucson", "Hyundai Santa Fe", "Hyundai Sonata",
+            "Hyundai Palisade", "Hyundai Elantra", "Hyundai Kona",
+            # Kia
+            "Kia Sportage", "Kia Sorento", "Kia Telluride",
+            "Kia K5", "Kia Forte", "Kia Carnival",
+            # Genesis
+            "Genesis GV80", "Genesis GV70", "Genesis G70",
         ],
     },
 ]
