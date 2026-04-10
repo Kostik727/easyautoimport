@@ -433,7 +433,14 @@ def build_caption(lot, channel_id):
             tags.append("#%s" % model_tag)
     if tags:
         lines.append(" ".join(tags))
-    lines.append(channel_id)
+    # Map channel ID to display name
+    CHANNEL_NAMES = {
+        -1003789888102: "Easy Auto Import JP",
+        -1003812244128: "Easy Auto Import USA",
+        -1003980853554: "Easy Auto Import EU",
+        -1003928255577: "Easy Auto Import KR",
+    }
+    lines.append(CHANNEL_NAMES.get(channel_id, "Easy Auto Import"))
     return "\n".join(lines)
 
 def build_calendar_url(lot):
