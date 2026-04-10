@@ -1,5 +1,9 @@
 """
-Telegram Bot: monitor copart.com and post to @easyautoimport
+Telegram Bot: monitor copart.com and post to multiple channels
+🇺🇸 @easyautoimport — American brands
+🇯🇵 @easyautoimportjp — Japanese brands
+🇩🇪 @easyautoimporteu — German brands
+🇰🇷 @easyautoimportkr — Korean brands
 """
 
 import os
@@ -12,99 +16,112 @@ from datetime import datetime, timedelta, timezone
 from urllib.parse import quote
 
 BOT_TOKEN  = os.environ.get("BOT_TOKEN", "8435399634:AAHSjsvlP3LSGo-6TKg9v777dfC-iFct6bk")
-CHANNEL_ID = "@easyautoimport"
 SEEN_FILE  = "seen_lots.json"
-MAX_POSTS  = 5   # post up to 5 lots per run (every 10 min)
+MAX_POSTS  = 5   # post up to 5 lots per channel per run
 MIN_YEAR   = 2020
 
 COOLDOWN_HOURS = 6  # don't repost same lot within this period
 
-PRIORITY_MAKES = {
-    "LEXUS", "TOYOTA", "BMW", "FORD",
-    "ACURA", "AUDI", "CADILLAC", "CHEVROLET",
-    "DODGE", "GENESIS", "GMC", "HONDA",
-    "HYUNDAI", "INFINITI", "JEEP", "KIA", "LAND ROVER",
-    "LINCOLN", "MAZDA", "MERCEDES-BENZ",
-    "MITSUBISHI", "NISSAN", "PORSCHE", "RAM", "SUBARU",
-    "TESLA", "VOLKSWAGEN", "VOLVO",
-}
+# ---- Channel configurations ----
 
-# Priority order for sorting — first brands get posted first
-BRAND_PRIORITY = ["LEXUS", "TOYOTA", "BMW", "FORD"]
-
-# No model filter — accept all models from priority makes
-ALLOWED_MODELS = None
-
-QUERY_TERMS = [
-    # Priority: Lexus
-    "Lexus RX run and drive",
-    "Lexus NX run and drive",
-    "Lexus ES run and drive",
-    "Lexus GX run and drive",
-    "Lexus LX run and drive",
-    # Priority: Toyota
-    "Toyota Camry run and drive",
-    "Toyota Corolla run and drive",
-    "Toyota RAV4 run and drive",
-    "Toyota Highlander run and drive",
-    "Toyota 4Runner run and drive",
-    "Toyota Tacoma run and drive",
-    "Toyota Tundra run and drive",
-    "Toyota Sienna run and drive",
-    "Toyota Prius run and drive",
-    "Toyota Sequoia run and drive",
-    "Toyota Land Cruiser run and drive",
-    # Priority: BMW
-    "BMW X5 run and drive",
-    "BMW X3 run and drive",
-    "BMW 3 Series run and drive",
-    "BMW 5 Series run and drive",
-    "BMW X7 run and drive",
-    # Priority: Ford
-    "Ford F-150 run and drive",
-    "Ford Explorer run and drive",
-    "Ford Mustang run and drive",
-    "Ford Bronco run and drive",
-    "Ford Expedition run and drive",
-    # Other
-    "Hyundai Tucson run and drive",
-    "Hyundai Santa Fe run and drive",
-    "Hyundai Sonata run and drive",
-    "Hyundai Palisade run and drive",
-    "Kia Sportage run and drive",
-    "Kia Sorento run and drive",
-    "Kia Telluride run and drive",
-    "Honda CR-V run and drive",
-    "Honda Civic run and drive",
-    "Honda Accord run and drive",
-    "Honda Pilot run and drive",
-    "Mercedes-Benz GLE run and drive",
-    "Mercedes-Benz GLC run and drive",
-    "Mercedes-Benz E-Class run and drive",
-    "Audi Q5 run and drive",
-    "Audi Q7 run and drive",
-    "Chevrolet Tahoe run and drive",
-    "GMC Yukon run and drive",
-    "Chevrolet Silverado run and drive",
-    "Jeep Grand Cherokee run and drive",
-    "Jeep Wrangler run and drive",
-    "Dodge Durango run and drive",
-    "RAM 1500 run and drive",
-    "Cadillac Escalade run and drive",
-    "Subaru Outback run and drive",
-    "Subaru Forester run and drive",
-    "Nissan Rogue run and drive",
-    "Nissan Pathfinder run and drive",
-    "Volkswagen Tiguan run and drive",
-    "Tesla Model Y run and drive",
-    "Tesla Model 3 run and drive",
-    "Porsche Cayenne run and drive",
-    "Genesis GV80 run and drive",
-    "Land Rover Range Rover run and drive",
-    "Mazda CX-5 run and drive",
-    "Lincoln Navigator run and drive",
-    "Infiniti QX80 run and drive",
-    "Acura MDX run and drive",
+CHANNELS = [
+    {
+        "id": "@easyautoimportjp",
+        "name": "Japanese",
+        "makes": {"TOYOTA", "LEXUS", "HONDA", "ACURA", "NISSAN", "INFINITI",
+                  "MAZDA", "SUBARU", "MITSUBISHI"},
+        "brand_priority": ["LEXUS", "TOYOTA", "HONDA", "NISSAN"],
+        "queries": [
+            "Lexus RX run and drive",
+            "Lexus NX run and drive",
+            "Lexus ES run and drive",
+            "Lexus GX run and drive",
+            "Lexus LX run and drive",
+            "Toyota Camry run and drive",
+            "Toyota Corolla run and drive",
+            "Toyota RAV4 run and drive",
+            "Toyota Highlander run and drive",
+            "Toyota 4Runner run and drive",
+            "Toyota Tacoma run and drive",
+            "Toyota Tundra run and drive",
+            "Toyota Sienna run and drive",
+            "Toyota Prius run and drive",
+            "Toyota Sequoia run and drive",
+            "Toyota Land Cruiser run and drive",
+            "Honda CR-V run and drive",
+            "Honda Civic run and drive",
+            "Honda Accord run and drive",
+            "Honda Pilot run and drive",
+            "Acura MDX run and drive",
+            "Nissan Rogue run and drive",
+            "Nissan Pathfinder run and drive",
+            "Infiniti QX80 run and drive",
+            "Mazda CX-5 run and drive",
+            "Subaru Outback run and drive",
+            "Subaru Forester run and drive",
+        ],
+    },
+    {
+        "id": "@easyautoimporteu",
+        "name": "German",
+        "makes": {"BMW", "MERCEDES-BENZ", "AUDI", "VOLKSWAGEN", "PORSCHE"},
+        "brand_priority": ["BMW", "MERCEDES-BENZ", "AUDI", "PORSCHE"],
+        "queries": [
+            "BMW X5 run and drive",
+            "BMW X3 run and drive",
+            "BMW 3 Series run and drive",
+            "BMW 5 Series run and drive",
+            "BMW X7 run and drive",
+            "Mercedes-Benz GLE run and drive",
+            "Mercedes-Benz GLC run and drive",
+            "Mercedes-Benz E-Class run and drive",
+            "Audi Q5 run and drive",
+            "Audi Q7 run and drive",
+            "Volkswagen Tiguan run and drive",
+            "Porsche Cayenne run and drive",
+        ],
+    },
+    {
+        "id": "@easyautoimport",
+        "name": "American",
+        "makes": {"FORD", "CHEVROLET", "DODGE", "GMC", "JEEP", "RAM",
+                  "CADILLAC", "LINCOLN", "TESLA"},
+        "brand_priority": ["FORD", "TESLA", "CHEVROLET", "JEEP"],
+        "queries": [
+            "Ford F-150 run and drive",
+            "Ford Explorer run and drive",
+            "Ford Mustang run and drive",
+            "Ford Bronco run and drive",
+            "Ford Expedition run and drive",
+            "Chevrolet Tahoe run and drive",
+            "Chevrolet Silverado run and drive",
+            "GMC Yukon run and drive",
+            "Jeep Grand Cherokee run and drive",
+            "Jeep Wrangler run and drive",
+            "Dodge Durango run and drive",
+            "RAM 1500 run and drive",
+            "Cadillac Escalade run and drive",
+            "Lincoln Navigator run and drive",
+            "Tesla Model Y run and drive",
+            "Tesla Model 3 run and drive",
+        ],
+    },
+    {
+        "id": "@easyautoimportkr",
+        "name": "Korean",
+        "makes": {"HYUNDAI", "KIA", "GENESIS"},
+        "brand_priority": ["HYUNDAI", "KIA", "GENESIS"],
+        "queries": [
+            "Hyundai Tucson run and drive",
+            "Hyundai Santa Fe run and drive",
+            "Hyundai Sonata run and drive",
+            "Hyundai Palisade run and drive",
+            "Kia Sportage run and drive",
+            "Kia Sorento run and drive",
+            "Kia Telluride run and drive",
+            "Genesis GV80 run and drive",
+        ],
+    },
 ]
 
 logging.basicConfig(
@@ -115,7 +132,6 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 MANAGER_PHONE = "https://t.me/+77476899519"
-CALCULATOR_URL = "https://t.me/+77476899519"
 
 HEADERS = {
     "User-Agent": (
@@ -245,11 +261,15 @@ def download_photo(urls: list):
             log.warning("photo error: %s", e)
     return None
 
-def fetch_lots() -> list:
+def fetch_lots(channel) -> list:
+    """Fetch lots from Copart for a specific channel config."""
     lots = []
     seen_ids = set()
+    makes = channel["makes"]
+    queries = channel["queries"]
+    brand_priority = channel["brand_priority"]
 
-    for query_str in QUERY_TERMS:
+    for query_str in queries:
         log.info("Searching: %s", query_str)
 
         for page in range(0, 3):
@@ -309,13 +329,8 @@ def fetch_lots() -> list:
                     make  = (item.get("mkn") or item.get("mk") or "").upper().strip()
                     model = (item.get("lm")  or item.get("md") or "").strip()
 
-                    if make not in PRIORITY_MAKES:
+                    if make not in makes:
                         continue
-
-                    if ALLOWED_MODELS:
-                        model_upper = model.upper()
-                        if not any(am in model_upper for am in ALLOWED_MODELS):
-                            continue
 
                     damage = (item.get("dd") or "").strip()
                     tims   = item.get("tims", "")
@@ -360,19 +375,19 @@ def fetch_lots() -> list:
         if len(lots) >= MAX_POSTS:
             break
 
-    # Sort by brand priority — Lexus, Toyota, BMW, Ford first
+    # Sort by brand priority
     def brand_sort_key(lot):
         make = lot.get("make", "").upper()
         try:
-            return BRAND_PRIORITY.index(make)
+            return brand_priority.index(make)
         except ValueError:
-            return len(BRAND_PRIORITY)
+            return len(brand_priority)
 
     lots.sort(key=brand_sort_key)
-    log.info("Total matching lots: %d", len(lots))
+    log.info("[%s] Total matching lots: %d", channel["name"], len(lots))
     return lots
 
-def build_caption(lot):
+def build_caption(lot, channel_id):
     lines = ["🚗 <b>%s</b>" % lot["title"]]
     lines.append("")
     if lot.get("price"):
@@ -417,7 +432,7 @@ def build_caption(lot):
             tags.append("#%s" % model_tag)
     if tags:
         lines.append(" ".join(tags))
-    lines.append("@easyautoimport")
+    lines.append(channel_id)
     return "\n".join(lines)
 
 def build_calendar_url(lot):
@@ -440,19 +455,19 @@ def build_calendar_url(lot):
         return None
 
 
-def build_calc_url(lot):
-    caption = build_caption(lot)
+def build_calc_url(lot, channel_id):
+    caption = build_caption(lot, channel_id)
     # Strip HTML tags for plain text
     text = re.sub(r'<[^>]+>', '', caption)
     text = "Здравствуйте, меня интересует этот автомобиль!\n\n" + text
     return "https://t.me/+77476899519?text=%s" % quote(text)
 
 
-def build_keyboard(lot):
+def build_keyboard(lot, channel_id):
     lot_id = lot["id"]
     rows = [
         [{"text": "📩 Написать менеджеру", "url": MANAGER_PHONE}],
-        [{"text": "📊 Рассчитать под ключ", "url": build_calc_url(lot)}],
+        [{"text": "📊 Рассчитать под ключ", "url": build_calc_url(lot, channel_id)}],
     ]
     cal_url = build_calendar_url(lot)
     if cal_url:
@@ -461,17 +476,17 @@ def build_keyboard(lot):
     return {"inline_keyboard": rows}
 
 
-def send_post(lot):
-    caption     = build_caption(lot)
+def send_post(lot, channel_id):
+    caption     = build_caption(lot, channel_id)
     photo_bytes = download_photo(lot.get("photos", []))
-    keyboard    = build_keyboard(lot)
+    keyboard    = build_keyboard(lot, channel_id)
     kb_json     = json.dumps(keyboard, ensure_ascii=False)
 
     if photo_bytes:
         resp = requests.post(
             "https://api.telegram.org/bot%s/sendPhoto" % BOT_TOKEN,
             data={
-                "chat_id":      CHANNEL_ID,
+                "chat_id":      channel_id,
                 "caption":      caption,
                 "parse_mode":   "HTML",
                 "reply_markup": kb_json,
@@ -479,7 +494,7 @@ def send_post(lot):
             files={"photo": ("photo.jpg", photo_bytes, "image/jpeg")},
             timeout=30
         )
-        log.info("sendPhoto: %s %s", resp.status_code, resp.text[:200])
+        log.info("sendPhoto [%s]: %s %s", channel_id, resp.status_code, resp.text[:200])
         if resp.status_code == 200:
             return True
         log.warning("Photo failed, falling back to text")
@@ -487,7 +502,7 @@ def send_post(lot):
     resp = requests.post(
         "https://api.telegram.org/bot%s/sendMessage" % BOT_TOKEN,
         json={
-            "chat_id":                  CHANNEL_ID,
+            "chat_id":                  channel_id,
             "text":                     caption,
             "parse_mode":               "HTML",
             "disable_web_page_preview": False,
@@ -495,25 +510,20 @@ def send_post(lot):
         },
         timeout=15
     )
-    log.info("sendMessage: %s", resp.status_code)
+    log.info("sendMessage [%s]: %s", channel_id, resp.status_code)
     return resp.status_code == 200
 
 
 def run_scraper():
-    """Fetch lots from Copart and post new ones to the channel."""
+    """Fetch lots from Copart and post new ones to all channels."""
     log.info("=" * 50)
     log.info("Scraper run: %s", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
     log.info("=" * 50)
 
     seen = load_seen()
-    lots = fetch_lots()
-
-    if not lots:
-        log.info("No matching lots found.")
-        return 0
+    now = datetime.utcnow()
 
     # Clean old entries (>48h) to keep file small
-    now = datetime.utcnow()
     expired = [k for k, v in seen.items() if _hours_ago(v, now) > 48]
     for k in expired:
         del seen[k]
@@ -521,33 +531,45 @@ def run_scraper():
         save_seen(seen)
         log.info("Cleaned %d expired entries from seen_lots", len(expired))
 
-    posted = 0
-    for lot in lots:
-        if posted >= MAX_POSTS:
-            break
+    total_posted = 0
 
-        last_posted = seen.get(lot["id"])
-        if last_posted:
-            hours = _hours_ago(last_posted, now)
-            if hours < COOLDOWN_HOURS:
-                log.info("Posted %.0fh ago, skip: %s", hours, lot["id"])
-                continue
+    for channel in CHANNELS:
+        log.info("--- Channel: %s (%s) ---", channel["id"], channel["name"])
+        lots = fetch_lots(channel)
 
-        log.info("Posting lot %s - %s", lot["id"], lot["title"])
-        success = send_post(lot)
+        if not lots:
+            log.info("[%s] No matching lots found.", channel["name"])
+            continue
 
-        if success:
-            seen[lot["id"]] = now.strftime("%Y-%m-%dT%H:%M:%S")
-            save_seen(seen)
-            posted += 1
-            log.info("Published OK (%d)", posted)
-        else:
-            log.warning("Failed to publish lot %s", lot["id"])
+        posted = 0
+        for lot in lots:
+            if posted >= MAX_POSTS:
+                break
 
-    if posted > 0:
+            last_posted = seen.get(lot["id"])
+            if last_posted:
+                hours = _hours_ago(last_posted, now)
+                if hours < COOLDOWN_HOURS:
+                    log.info("Posted %.0fh ago, skip: %s", hours, lot["id"])
+                    continue
+
+            log.info("Posting lot %s - %s → %s", lot["id"], lot["title"], channel["id"])
+            success = send_post(lot, channel["id"])
+
+            if success:
+                seen[lot["id"]] = now.strftime("%Y-%m-%dT%H:%M:%S")
+                save_seen(seen)
+                posted += 1
+                log.info("Published OK (%d)", posted)
+            else:
+                log.warning("Failed to publish lot %s", lot["id"])
+
+        total_posted += posted
+
+    if total_posted > 0:
         backup_seen(seen)
-    log.info("Scraper done: posted %d new lots", posted)
-    return posted
+    log.info("Scraper done: posted %d total lots across %d channels", total_posted, len(CHANNELS))
+    return total_posted
 
 
 if __name__ == "__main__":
