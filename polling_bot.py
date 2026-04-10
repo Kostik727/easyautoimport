@@ -24,7 +24,7 @@ ADMIN_ID = int(os.environ.get("ADMIN_ID", "0"))
 
 # Kaspi payment link (phone number for transfer)
 KASPI_PHONE = "+77476899519"
-KASPI_URL = "https://kaspi.kz/pay/" + KASPI_PHONE.replace("+", "")
+KASPI_URL = "https://pay.kaspi.kz/pay/ey4zccqj"
 
 MANAGER_PHONE = "https://t.me/+77476899519"
 
