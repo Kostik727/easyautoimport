@@ -26,12 +26,16 @@ ADMIN_ID = int(os.environ.get("ADMIN_ID", "0"))
 KASPI_PHONE = "+77476899519"
 KASPI_URL = "https://kaspi.kz/pay/" + KASPI_PHONE.replace("+", "")
 
+MANAGER_PHONE = "https://t.me/+77476899519"
+
 CHANNEL_MAP = {
-    "jp": {"label": "🇯🇵 Японские", "channel_id": "@easyautoimport"},
-    "us": {"label": "🇺🇸 Американские", "channel_id": "@easyautoimportusa"},
-    "eu": {"label": "🇩🇪 Немецкие", "channel_id": "@easyautoimporteu"},
-    "kr": {"label": "🇰🇷 Корейские", "channel_id": "@easyautoimportkr"},
+    "jp": {"label": "🇯🇵 Японские", "channel_id": -1003789888102},
+    "us": {"label": "🇺🇸 Американские", "channel_id": -1003812244128},
+    "eu": {"label": "🇩🇪 Немецкие", "channel_id": -1003980853554},
+    "kr": {"label": "🇰🇷 Корейские", "channel_id": -1003928255577},
 }
+
+SUB_CHECK_INTERVAL = 60 * 60  # check subscriptions every hour
 
 logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(message)s",
@@ -65,6 +69,80 @@ def answer_callback(cb_id, text):
     send("answerCallbackQuery", callback_query_id=cb_id, text=text, show_alert=False)
 
 
+# ---- channel access management ----
+
+def create_invite_link(channel_id):
+    """Create a one-time invite link for a private channel."""
+    result = send("createChatInviteLink", chat_id=channel_id, member_limit=1)
+    link = result.get("result", {}).get("invite_link")
+    return link
+
+
+def kick_from_channel(channel_id, user_id):
+    """Remove user from channel."""
+    send("banChatMember", chat_id=channel_id, user_id=user_id)
+    # Unban so they can rejoin later with new invite
+    send("unbanChatMember", chat_id=channel_id, user_id=user_id, only_if_banned=True)
+
+
+def send_invite_links(user_id, channel_keys):
+    """Generate and send invite links for selected channels."""
+    links = []
+    for key in channel_keys:
+        if key not in CHANNEL_MAP:
+            continue
+        ch = CHANNEL_MAP[key]
+        link = create_invite_link(ch["channel_id"])
+        if link:
+            links.append("%s: %s" % (ch["label"], link))
+
+    if not links:
+        return
+
+    text = "🔑 <b>Ваши ссылки на каналы:</b>\n\n" + "\n".join(links)
+    text += "\n\nСсылки одноразовые — переходите по ним для вступления."
+    send("sendMessage", chat_id=user_id, text=text, parse_mode="HTML",
+         disable_web_page_preview=True)
+
+
+def check_expired_subscriptions():
+    """Kick users with expired subscriptions from all channels."""
+    all_users = users.load_users()
+    kicked = 0
+    for uid, u in all_users.items():
+        if uid.startswith("_"):
+            continue
+        if users.check_subscription(int(uid)) == "active":
+            continue
+        channels = u.get("channels", [])
+        if not channels:
+            continue
+        for key in channels:
+            if key in CHANNEL_MAP:
+                kick_from_channel(CHANNEL_MAP[key]["channel_id"], int(uid))
+                time.sleep(0.5)
+        kicked += 1
+        # Notify user
+        send("sendMessage", chat_id=int(uid),
+             text="🔒 Ваша подписка истекла. Доступ к каналам закрыт.\n"
+                  "Продлите подписку: /subscribe")
+        time.sleep(0.5)
+    if kicked:
+        log.info("Kicked %d users with expired subscriptions", kicked)
+
+
+def subscription_check_loop():
+    """Background thread: check for expired subscriptions and kick users."""
+    log.info("Subscription check thread started, interval=%ds", SUB_CHECK_INTERVAL)
+    time.sleep(300)  # wait 5 min for bot to stabilize
+    while True:
+        try:
+            check_expired_subscriptions()
+        except Exception as e:
+            log.error("Subscription check error: %s", e, exc_info=True)
+        time.sleep(SUB_CHECK_INTERVAL)
+
+
 # ---- channel selection keyboard ----
 
 def build_channel_keyboard(user_id):
@@ -75,6 +153,7 @@ def build_channel_keyboard(user_id):
         check = "✅" if key in selected else "⬜"
         rows.append([{"text": "%s %s" % (check, info["label"]), "callback_data": "ch_%s" % key}])
     rows.append([{"text": "✔️ Готово", "callback_data": "ch_done"}])
+    rows.append([{"text": "📩 Связаться с менеджером", "url": MANAGER_PHONE}])
     rows.append([{"text": "🟡 Kaspi.kz — Оплатить подписку", "url": KASPI_URL}])
     return {"inline_keyboard": rows}
 
@@ -138,16 +217,16 @@ def handle_saved(chat_id, user_id):
 def handle_help(chat_id):
     text = (
         "🔧 <b>Помощь</b>\n\n"
-        "/start - выбрать категории авто\n"
+        "/start - выбрать категории авто и получить ссылки\n"
         "❤️ Сохранить - сохранить лот из канала\n"
         "/saved - посмотреть сохраненные\n"
-        "/subscribe - подписка\n"
+        "/subscribe - подписка и оплата\n"
         "/help - эта справка\n\n"
-        "Каналы:\n"
-        "🇯🇵 @easyautoimport\n"
-        "🇺🇸 @easyautoimportusa\n"
-        "🇩🇪 @easyautoimporteu\n"
-        "🇰🇷 @easyautoimportkr"
+        "Каналы (доступ по подписке):\n"
+        "🇯🇵 Японские авто\n"
+        "🇺🇸 Американские авто\n"
+        "🇩🇪 Немецкие авто\n"
+        "🇰🇷 Корейские авто"
     )
     send("sendMessage", chat_id=chat_id, text=text, parse_mode="HTML")
 
@@ -254,9 +333,12 @@ def handle_admin(chat_id, user_id, args):
         if ok:
             send("sendMessage", chat_id=chat_id,
                  text="✅ Подписка активирована для %s на %d дней." % (uid, days))
-            # Notify user
+            # Notify user and send invite links
             send("sendMessage", chat_id=int(uid),
                  text="🎉 Ваша подписка активирована на %d дней! Спасибо за оплату." % days)
+            u = users.get_user(uid)
+            if u and u.get("channels"):
+                send_invite_links(int(uid), u["channels"])
         else:
             send("sendMessage", chat_id=chat_id, text="Пользователь не найден.")
 
@@ -289,11 +371,19 @@ def handle_callback(cb):
             if not channels:
                 answer_callback(cb_id, "Выберите хотя бы один канал!")
                 return
+            sub = users.check_subscription(user_id)
+            if sub != "active":
+                answer_callback(cb_id, "Подписка истекла!")
+                send("sendMessage", chat_id=msg.get("chat", {}).get("id", user_id),
+                     text="🔒 Подписка истекла. Продлите для доступа к каналам: /subscribe")
+                return
             labels = [CHANNEL_MAP[c]["label"] for c in channels if c in CHANNEL_MAP]
             answer_callback(cb_id, "Готово!")
+            chat_id = msg.get("chat", {}).get("id", user_id)
             text = "✅ Вы подписаны на:\n" + "\n".join(labels)
-            text += "\n\nЛоты публикуются каждые 10 минут. Нажмите ❤️ на понравившемся!"
-            send("sendMessage", chat_id=msg.get("chat", {}).get("id", user_id), text=text)
+            text += "\n\nОтправляю ссылки на каналы..."
+            send("sendMessage", chat_id=chat_id, text=text)
+            send_invite_links(user_id, channels)
             return
 
         if key in CHANNEL_MAP:
@@ -409,7 +499,7 @@ def scraper_loop():
             log.error("Scraper error: %s", e, exc_info=True)
             try:
                 requests.post(API + "/sendMessage", json={
-                    "chat_id": "@easyautoimport",
+                    "chat_id": -1003789888102,
                     "text": "⚠️ Scraper error: %s" % str(e)[:200],
                 }, timeout=10)
             except Exception:
@@ -587,6 +677,10 @@ def main():
         digest_thread.start()
     except ImportError:
         log.warning("digest module not found, skipping")
+
+    # Start subscription check (kick expired users from channels)
+    sub_thread = threading.Thread(target=subscription_check_loop, daemon=True)
+    sub_thread.start()
 
     offset = 0
     while True:

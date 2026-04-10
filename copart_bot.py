@@ -26,7 +26,7 @@ COOLDOWN_HOURS = 6  # don't repost same lot within this period
 
 CHANNELS = [
     {
-        "id": "@easyautoimport",
+        "id": -1003789888102,
         "name": "Japanese",
         "makes": {"TOYOTA", "LEXUS", "HONDA", "ACURA", "NISSAN", "INFINITI",
                   "MAZDA", "SUBARU", "MITSUBISHI"},
@@ -62,7 +62,7 @@ CHANNELS = [
         ],
     },
     {
-        "id": "@easyautoimporteu",
+        "id": -1003980853554,
         "name": "German",
         "makes": {"BMW", "MERCEDES-BENZ", "AUDI", "VOLKSWAGEN", "PORSCHE"},
         "brand_priority": ["BMW", "MERCEDES-BENZ", "AUDI", "PORSCHE"],
@@ -82,7 +82,7 @@ CHANNELS = [
         ],
     },
     {
-        "id": "@easyautoimportusa",
+        "id": -1003812244128,
         "name": "American",
         "makes": {"FORD", "CHEVROLET", "DODGE", "GMC", "JEEP", "RAM",
                   "CADILLAC", "LINCOLN", "TESLA"},
@@ -107,7 +107,7 @@ CHANNELS = [
         ],
     },
     {
-        "id": "@easyautoimportkr",
+        "id": -1003928255577,
         "name": "Korean",
         "makes": {"HYUNDAI", "KIA", "GENESIS"},
         "brand_priority": ["HYUNDAI", "KIA", "GENESIS"],
