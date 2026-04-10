@@ -17,7 +17,7 @@ from urllib.parse import quote
 
 BOT_TOKEN  = os.environ.get("BOT_TOKEN", "8435399634:AAHSjsvlP3LSGo-6TKg9v777dfC-iFct6bk")
 SEEN_FILE  = "seen_lots.json"
-MAX_POSTS  = 5   # post up to 5 lots per channel per run
+MAX_POSTS  = 10  # post up to 10 lots per channel per run (3 runs/day)
 MIN_YEAR   = 2020
 
 COOLDOWN_HOURS = 6  # don't repost same lot within this period

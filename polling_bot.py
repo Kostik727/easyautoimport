@@ -18,7 +18,8 @@ import users
 
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "8435399634:AAHSjsvlP3LSGo-6TKg9v777dfC-iFct6bk")
 API = "https://api.telegram.org/bot" + BOT_TOKEN
-SCRAPE_INTERVAL = 10 * 60  # every 10 minutes
+# Scraper runs at 09:00, 15:00, 20:00 Astana time (UTC+5)
+SCRAPE_HOURS_UTC = [4, 10, 15]  # 09-5=4, 15-5=10, 20-5=15
 
 ADMIN_ID = int(os.environ.get("ADMIN_ID", "0"))
 
@@ -486,30 +487,37 @@ def process_update(update):
 # ---- background scraper ----
 
 def scraper_loop():
-    """Run copart scraper every SCRAPE_INTERVAL seconds."""
-    log.info("Scraper thread started, interval=%ds", SCRAPE_INTERVAL)
+    """Run copart scraper at 09:00, 15:00, 20:00 Astana time."""
+    log.info("Scraper thread started, schedule: 09:00, 15:00, 20:00 Astana")
     time.sleep(30)
     from copart_bot import run_scraper
+    from datetime import datetime, timezone
+    last_run_hour = -1
     while True:
-        try:
-            log.info("Running Copart scraper...")
-            posted = run_scraper()
-            log.info("Scraper finished, posted %s lots", posted)
-        except Exception as e:
-            log.error("Scraper error: %s", e, exc_info=True)
+        now_utc = datetime.now(timezone.utc)
+        current_hour = now_utc.hour
+        if current_hour in SCRAPE_HOURS_UTC and current_hour != last_run_hour:
+            last_run_hour = current_hour
             try:
-                requests.post(API + "/sendMessage", json={
-                    "chat_id": -1003789888102,
-                    "text": "⚠️ Scraper error: %s" % str(e)[:200],
-                }, timeout=10)
+                astana_hour = (current_hour + 5) % 24
+                log.info("Running Copart scraper (Астана %02d:00)...", astana_hour)
+                posted = run_scraper()
+                log.info("Scraper finished, posted %s lots", posted)
+            except Exception as e:
+                log.error("Scraper error: %s", e, exc_info=True)
+                try:
+                    requests.post(API + "/sendMessage", json={
+                        "chat_id": -1003789888102,
+                        "text": "⚠️ Scraper error: %s" % str(e)[:200],
+                    }, timeout=10)
+                except Exception:
+                    pass
+            # Backup users after each scraper run
+            try:
+                users.backup_users()
             except Exception:
                 pass
-        # Backup users after each scraper run
-        try:
-            users.backup_users()
-        except Exception:
-            pass
-        time.sleep(SCRAPE_INTERVAL)
+        time.sleep(60)  # check every minute
 
 
 # ---- calendar HTTP server ----
