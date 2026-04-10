@@ -26,7 +26,7 @@ COOLDOWN_HOURS = 6  # don't repost same lot within this period
 
 CHANNELS = [
     {
-        "id": "@easyautoimportjp",
+        "id": "@easyautoimport",
         "name": "Japanese",
         "makes": {"TOYOTA", "LEXUS", "HONDA", "ACURA", "NISSAN", "INFINITI",
                   "MAZDA", "SUBARU", "MITSUBISHI"},
@@ -82,7 +82,7 @@ CHANNELS = [
         ],
     },
     {
-        "id": "@easyautoimport",
+        "id": "@easyautoimportusa",
         "name": "American",
         "makes": {"FORD", "CHEVROLET", "DODGE", "GMC", "JEEP", "RAM",
                   "CADILLAC", "LINCOLN", "TESLA"},
