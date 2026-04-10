@@ -141,14 +141,22 @@ def scraper_loop():
     log.info("Scraper thread started, interval=%ds", SCRAPE_INTERVAL)
     # Wait 30 seconds before first run to let bot stabilize
     time.sleep(30)
+    from copart_bot import run_scraper
     while True:
         try:
             log.info("Running Copart scraper...")
-            from copart_bot import run_scraper
             posted = run_scraper()
             log.info("Scraper finished, posted %s lots", posted)
         except Exception as e:
             log.error("Scraper error: %s", e, exc_info=True)
+            # Notify in channel about errors
+            try:
+                requests.post(API + "/sendMessage", json={
+                    "chat_id": "@easyautoimport",
+                    "text": "⚠️ Scraper error: %s" % str(e)[:200],
+                }, timeout=10)
+            except Exception:
+                pass
         time.sleep(SCRAPE_INTERVAL)
 
 
