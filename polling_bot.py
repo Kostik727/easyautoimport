@@ -75,6 +75,7 @@ def build_channel_keyboard(user_id):
         check = "✅" if key in selected else "⬜"
         rows.append([{"text": "%s %s" % (check, info["label"]), "callback_data": "ch_%s" % key}])
     rows.append([{"text": "✔️ Готово", "callback_data": "ch_done"}])
+    rows.append([{"text": "🟡 Kaspi.kz — Оплатить подписку", "url": KASPI_URL}])
     return {"inline_keyboard": rows}
 
 
@@ -97,7 +98,7 @@ def handle_start(chat_id, user):
         "5. Напишите менеджеру для покупки\n\n"
         "🎁 <b>Первые 2 дня — бесплатно!</b>\n"
         "Вам доступны все функции: сохранение лотов, напоминания об аукционах и ежедневный дайджест лучших предложений.\n\n"
-        "💳 После пробного периода — <b>1 500 ₸/мес</b>\n"
+        "💳 После пробного периода — <b>5 000 ₸/мес</b>\n"
         "Оплата через Kaspi. Подробнее: /subscribe\n\n"
         "👇 <b>Выберите интересующие категории:</b>"
     ) % (first_name or "друг")
@@ -175,11 +176,11 @@ def handle_subscribe(chat_id, user_id):
         "• Сохранение лотов ❤️\n"
         "• Напоминания об аукционах ⏰\n"
         "• Ежедневный дайджест лучших лотов 📊\n\n"
-        "Стоимость: <b>1500 ₸/мес</b>\n\n"
+        "Стоимость: <b>5 000 ₸/мес</b>\n\n"
         "Оплатите через Kaspi и отправьте скриншот."
     )
     kb = {"inline_keyboard": [
-        [{"text": "💳 Оплатить через Kaspi", "url": KASPI_URL}],
+        [{"text": "🟡 Kaspi.kz — Оплатить 5 000 ₸", "url": KASPI_URL}],
         [{"text": "📸 Отправить скриншот оплаты", "callback_data": "payment_screenshot"}],
     ]}
     send("sendMessage", chat_id=chat_id, text=text, parse_mode="HTML", reply_markup=kb)
