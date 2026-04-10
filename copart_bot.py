@@ -14,10 +14,10 @@ from urllib.parse import quote
 BOT_TOKEN  = os.environ.get("BOT_TOKEN", "8435399634:AAHSjsvlP3LSGo-6TKg9v777dfC-iFct6bk")
 CHANNEL_ID = "@easyautoimport"
 SEEN_FILE  = "seen_lots.json"
-MAX_POSTS  = 1   # post only 1 lot per run
+MAX_POSTS  = 5   # post up to 5 lots per run (every 10 min)
 MIN_YEAR   = 2020
 
-COOLDOWN_HOURS = 24  # don't repost same lot within this period
+COOLDOWN_HOURS = 6  # don't repost same lot within this period
 
 PRIORITY_MAKES = {
     "LEXUS", "TOYOTA", "BMW", "FORD",

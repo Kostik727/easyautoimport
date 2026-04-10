@@ -1,6 +1,8 @@
 name: Copart Bot
 
 on:
+  schedule:
+    - cron: '0 */6 * * *'  # backup: every 6 hours in case Heroku is down
   workflow_dispatch:
 
 jobs:
