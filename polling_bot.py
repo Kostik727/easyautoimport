@@ -1,7 +1,7 @@
 """
 Polling bot for @easyautoimport
-Handles: /start, /saved, /help, callback queries (save button)
-Also runs Copart scraper periodically in a background thread.
+Handles: /start, /saved, /help, /subscribe, /admin, callback queries
+Also runs Copart scraper, reminders, and digest in background threads.
 """
 
 import os
@@ -14,10 +14,24 @@ from datetime import datetime
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
 
+import users
+
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "8435399634:AAHSjsvlP3LSGo-6TKg9v777dfC-iFct6bk")
 API = "https://api.telegram.org/bot" + BOT_TOKEN
-SAVED_FILE = "saved_lots.json"
 SCRAPE_INTERVAL = 10 * 60  # every 10 minutes
+
+ADMIN_ID = int(os.environ.get("ADMIN_ID", "0"))
+
+# Kaspi payment link (phone number for transfer)
+KASPI_PHONE = "+77476899519"
+KASPI_URL = "https://kaspi.kz/pay/" + KASPI_PHONE.replace("+", "")
+
+CHANNEL_MAP = {
+    "jp": {"label": "🇯🇵 Японские", "channel_id": "@easyautoimport"},
+    "us": {"label": "🇺🇸 Американские", "channel_id": "@easyautoimportusa"},
+    "eu": {"label": "🇩🇪 Немецкие", "channel_id": "@easyautoimporteu"},
+    "kr": {"label": "🇰🇷 Корейские", "channel_id": "@easyautoimportkr"},
+}
 
 logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(message)s",
@@ -25,20 +39,6 @@ logging.basicConfig(
     handlers=[logging.StreamHandler()]
 )
 log = logging.getLogger(__name__)
-
-
-# ---- saved lots persistence ----
-
-def load_saved():
-    if os.path.exists(SAVED_FILE):
-        with open(SAVED_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    return {}
-
-
-def save_saved(data):
-    with open(SAVED_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
 
 
 # ---- Telegram helpers ----
@@ -52,66 +52,304 @@ def send(method, **kwargs):
         return {}
 
 
+def send_form(method, data=None, files=None):
+    try:
+        r = requests.post(API + "/" + method, data=data, files=files, timeout=15)
+        return r.json()
+    except Exception as e:
+        log.error("send_form %s error: %s", method, e)
+        return {}
+
+
 def answer_callback(cb_id, text):
     send("answerCallbackQuery", callback_query_id=cb_id, text=text, show_alert=False)
 
 
+# ---- channel selection keyboard ----
+
+def build_channel_keyboard(user_id):
+    user = users.get_user(user_id)
+    selected = user.get("channels", []) if user else []
+    rows = []
+    for key, info in CHANNEL_MAP.items():
+        check = "✅" if key in selected else "⬜"
+        rows.append([{"text": "%s %s" % (check, info["label"]), "callback_data": "ch_%s" % key}])
+    rows.append([{"text": "✔️ Готово", "callback_data": "ch_done"}])
+    return {"inline_keyboard": rows}
+
+
 # ---- handlers ----
 
-def handle_start(chat_id):
+def handle_start(chat_id, user):
+    user_id = user.get("id", 0)
+    username = user.get("username", "")
+    first_name = user.get("first_name", "")
+    users.get_or_create_user(user_id, username, first_name)
+
     text = (
-        "Привет! 👋\n\n"
-        "Я бот канала @easyautoimport.\n"
-        "Нажмите ❤️ Сохранить на постах канала,\n"
-        "чтобы сохранять лоты.\n\n"
-        "Команды:\n"
-        "/saved - мои сохраненные\n"
-        "/help - помощь"
-    )
-    send("sendMessage", chat_id=chat_id, text=text, parse_mode="HTML")
+        "Привет, %s! 👋\n\n"
+        "Я бот <b>Easy Auto Import</b>.\n"
+        "Нахожу лучшие лоты с аукциона Copart.\n\n"
+        "Выберите интересующие категории авто:"
+    ) % (first_name or "друг")
+
+    kb = build_channel_keyboard(user_id)
+    send("sendMessage", chat_id=chat_id, text=text, parse_mode="HTML", reply_markup=kb)
 
 
 def handle_saved(chat_id, user_id):
-    data = load_saved()
-    user_lots = data.get(str(user_id), [])
-    if not user_lots:
-        send("sendMessage", chat_id=chat_id, text="У вас пока нет сохраненных лотов.")
+    sub = users.check_subscription(user_id)
+    lots = users.get_saved_lots(user_id)
+
+    if not lots:
+        send("sendMessage", chat_id=chat_id, text="У вас пока нет сохраненных лотов.\nНажмите ❤️ на постах канала.")
         return
+
+    if sub == "expired":
+        # Show limited + upsell
+        lines = ["💾 <b>Ваши сохраненные лоты:</b>\n"]
+        for lot_id in lots[-3:]:
+            lines.append('<a href="https://www.copart.com/lot/%s">Lot #%s</a>' % (lot_id, lot_id))
+        lines.append("\n🔒 Подписка истекла. Показаны 3 из %d." % len(lots))
+        lines.append("Используйте /subscribe для продления.")
+        send("sendMessage", chat_id=chat_id, text="\n".join(lines), parse_mode="HTML",
+             disable_web_page_preview=True)
+        return
+
     lines = ["💾 <b>Ваши сохраненные лоты:</b>\n"]
-    for lot_id in user_lots[-20:]:
+    for lot_id in lots[-20:]:
         lines.append('<a href="https://www.copart.com/lot/%s">Lot #%s</a>' % (lot_id, lot_id))
-    send("sendMessage", chat_id=chat_id, text="\n".join(lines), parse_mode="HTML", disable_web_page_preview=True)
+    if len(lots) > 20:
+        lines.append("\n... и ещё %d" % (len(lots) - 20))
+    send("sendMessage", chat_id=chat_id, text="\n".join(lines), parse_mode="HTML",
+         disable_web_page_preview=True)
 
 
 def handle_help(chat_id):
     text = (
         "🔧 <b>Помощь</b>\n\n"
-        "❤️ Сохранить - сохранить лот\n"
+        "/start - выбрать категории авто\n"
+        "❤️ Сохранить - сохранить лот из канала\n"
         "/saved - посмотреть сохраненные\n"
-        "/help - эта справка"
+        "/subscribe - подписка\n"
+        "/help - эта справка\n\n"
+        "Каналы:\n"
+        "🇯🇵 @easyautoimport\n"
+        "🇺🇸 @easyautoimportusa\n"
+        "🇩🇪 @easyautoimporteu\n"
+        "🇰🇷 @easyautoimportkr"
     )
     send("sendMessage", chat_id=chat_id, text=text, parse_mode="HTML")
 
+
+def handle_subscribe(chat_id, user_id):
+    info = users.get_subscription_info(user_id)
+    status = info["status"]
+    sub_type = info["type"]
+    expires = info.get("expires_at", "")
+
+    if status == "active":
+        exp_display = ""
+        try:
+            dt = datetime.strptime(expires, "%Y-%m-%dT%H:%M:%S")
+            exp_display = dt.strftime("%d.%m.%Y %H:%M")
+        except (ValueError, TypeError):
+            exp_display = expires
+        label = "Пробный период" if sub_type == "trial" else "Подписка"
+        text = "✅ %s активен до <b>%s</b>" % (label, exp_display)
+        send("sendMessage", chat_id=chat_id, text=text, parse_mode="HTML")
+        return
+
+    text = (
+        "🔒 <b>Подписка истекла</b>\n\n"
+        "С подпиской вы получаете:\n"
+        "• Сохранение лотов ❤️\n"
+        "• Напоминания об аукционах ⏰\n"
+        "• Ежедневный дайджест лучших лотов 📊\n\n"
+        "Стоимость: <b>1500 ₸/мес</b>\n\n"
+        "Оплатите через Kaspi и отправьте скриншот."
+    )
+    kb = {"inline_keyboard": [
+        [{"text": "💳 Оплатить через Kaspi", "url": KASPI_URL}],
+        [{"text": "📸 Отправить скриншот оплаты", "callback_data": "payment_screenshot"}],
+    ]}
+    send("sendMessage", chat_id=chat_id, text=text, parse_mode="HTML", reply_markup=kb)
+
+
+# ---- admin ----
+
+def handle_admin(chat_id, user_id, args):
+    if user_id != ADMIN_ID:
+        return
+
+    parts = args.strip().split()
+    cmd = parts[0] if parts else "help"
+
+    if cmd == "saves":
+        save_log = users.get_save_log()
+        if not save_log:
+            send("sendMessage", chat_id=chat_id, text="Нет сохранений.")
+            return
+        lines = ["<b>Последние сохранения:</b>\n"]
+        for entry in save_log[-20:]:
+            lines.append("@%s → Lot #%s (%s)" % (
+                entry.get("username", "?"),
+                entry.get("lot_id", "?"),
+                entry.get("at", "")[:16],
+            ))
+        send("sendMessage", chat_id=chat_id, text="\n".join(lines), parse_mode="HTML")
+
+    elif cmd == "users":
+        stats = users.get_all_users_stats()
+        text = (
+            "<b>Пользователи:</b>\n"
+            "Всего: %d\n"
+            "Trial: %d\n"
+            "Paid: %d\n"
+            "Expired: %d"
+        ) % (stats["total"], stats["trial"], stats["paid"], stats["expired"])
+        send("sendMessage", chat_id=chat_id, text=text, parse_mode="HTML")
+
+    elif cmd == "user" and len(parts) >= 2:
+        uid = parts[1]
+        u = users.get_user(uid)
+        if not u:
+            send("sendMessage", chat_id=chat_id, text="Пользователь не найден.")
+            return
+        sub_status = users.check_subscription(int(uid))
+        text = (
+            "<b>User #%s</b>\n"
+            "Username: @%s\n"
+            "Имя: %s\n"
+            "Каналы: %s\n"
+            "Подписка: %s (%s)\n"
+            "Сохранено лотов: %d\n"
+            "Регистрация: %s"
+        ) % (
+            uid,
+            u.get("username", "-"),
+            u.get("first_name", "-"),
+            ", ".join(u.get("channels", [])) or "-",
+            u.get("subscription", {}).get("status", "-"),
+            sub_status,
+            len(u.get("saved_lots", [])),
+            u.get("registered_at", "-")[:16],
+        )
+        send("sendMessage", chat_id=chat_id, text=text, parse_mode="HTML")
+
+    elif cmd == "activate" and len(parts) >= 2:
+        uid = parts[1]
+        days = int(parts[2]) if len(parts) >= 3 else 30
+        ok = users.activate_subscription(int(uid), days, admin_id=user_id)
+        if ok:
+            send("sendMessage", chat_id=chat_id,
+                 text="✅ Подписка активирована для %s на %d дней." % (uid, days))
+            # Notify user
+            send("sendMessage", chat_id=int(uid),
+                 text="🎉 Ваша подписка активирована на %d дней! Спасибо за оплату." % days)
+        else:
+            send("sendMessage", chat_id=chat_id, text="Пользователь не найден.")
+
+    else:
+        text = (
+            "<b>Admin команды:</b>\n"
+            "/admin saves - последние сохранения\n"
+            "/admin users - статистика\n"
+            "/admin user ID - инфо о пользователе\n"
+            "/admin activate ID [DAYS] - активировать подписку"
+        )
+        send("sendMessage", chat_id=chat_id, text=text, parse_mode="HTML")
+
+
+# ---- callback handlers ----
 
 def handle_callback(cb):
     cb_id = cb["id"]
     data = cb.get("data", "")
     user = cb.get("from", {})
-    user_id = str(user.get("id", ""))
+    user_id = user.get("id", 0)
+    msg = cb.get("message", {})
 
+    # Channel toggle
+    if data.startswith("ch_"):
+        key = data[3:]
+        if key == "done":
+            u = users.get_user(user_id)
+            channels = u.get("channels", []) if u else []
+            if not channels:
+                answer_callback(cb_id, "Выберите хотя бы один канал!")
+                return
+            labels = [CHANNEL_MAP[c]["label"] for c in channels if c in CHANNEL_MAP]
+            answer_callback(cb_id, "Готово!")
+            text = "✅ Вы подписаны на:\n" + "\n".join(labels)
+            text += "\n\nЛоты публикуются каждые 10 минут. Нажмите ❤️ на понравившемся!"
+            send("sendMessage", chat_id=msg.get("chat", {}).get("id", user_id), text=text)
+            return
+
+        if key in CHANNEL_MAP:
+            users.toggle_channel(user_id, key)
+            kb = build_channel_keyboard(user_id)
+            send("editMessageReplyMarkup",
+                 chat_id=msg.get("chat", {}).get("id", user_id),
+                 message_id=msg.get("message_id"),
+                 reply_markup=kb)
+            answer_callback(cb_id, CHANNEL_MAP[key]["label"])
+            return
+
+    # Save lot
     if data.startswith("save_"):
         lot_id = data[5:]
-        saved = load_saved()
-        user_lots = saved.get(user_id, [])
-        if lot_id in user_lots:
-            answer_callback(cb_id, "Уже сохранено!")
+        sub = users.check_subscription(user_id)
+        if sub == "expired":
+            answer_callback(cb_id, "🔒 Подписка истекла. /subscribe")
             return
-        user_lots.append(lot_id)
-        saved[user_id] = user_lots
-        save_saved(saved)
-        answer_callback(cb_id, "❤️ Сохранено! /saved")
-        log.info("User %s saved lot %s", user_id, lot_id)
+        # Ensure user exists
+        username = user.get("username", "")
+        first_name = user.get("first_name", "")
+        users.get_or_create_user(user_id, username, first_name)
+        added = users.add_saved_lot(user_id, lot_id)
+        if added:
+            answer_callback(cb_id, "❤️ Сохранено! /saved")
+            log.info("User %s saved lot %s", user_id, lot_id)
+        else:
+            answer_callback(cb_id, "Уже сохранено!")
+        return
 
+    # Payment screenshot
+    if data == "payment_screenshot":
+        users.set_awaiting_payment(user_id, True)
+        answer_callback(cb_id, "Отправьте скриншот оплаты в этот чат")
+        send("sendMessage", chat_id=msg.get("chat", {}).get("id", user_id),
+             text="📸 Отправьте скриншот оплаты через Kaspi в этот чат.")
+        return
+
+
+def handle_photo(msg):
+    """Handle photo messages — check if it's a payment screenshot."""
+    chat_id = msg["chat"]["id"]
+    user_id = msg["from"]["id"]
+
+    if not users.is_awaiting_payment(user_id):
+        return
+
+    users.set_awaiting_payment(user_id, False)
+
+    # Forward to admin
+    if ADMIN_ID:
+        send("forwardMessage", chat_id=ADMIN_ID, from_chat_id=chat_id,
+             message_id=msg["message_id"])
+        u = users.get_user(user_id)
+        username = u.get("username", "") if u else ""
+        send("sendMessage", chat_id=ADMIN_ID,
+             text="💳 Скриншот оплаты от @%s (ID: %s)\n/admin activate %s 30" % (
+                 username, user_id, user_id),
+             parse_mode="HTML")
+
+    send("sendMessage", chat_id=chat_id,
+         text="✅ Скриншот получен! Ожидайте подтверждения оплаты.")
+
+
+# ---- update router ----
 
 def process_update(update):
     if "callback_query" in update:
@@ -123,15 +361,26 @@ def process_update(update):
         return
 
     chat_id = msg["chat"]["id"]
-    user_id = msg["from"]["id"]
+    user_from = msg.get("from", {})
+    user_id = user_from.get("id", 0)
     text = (msg.get("text") or "").strip()
 
+    # Photo handling (payment screenshots)
+    if msg.get("photo"):
+        handle_photo(msg)
+        return
+
     if text == "/start":
-        handle_start(chat_id)
+        handle_start(chat_id, user_from)
     elif text == "/saved":
         handle_saved(chat_id, user_id)
     elif text == "/help":
         handle_help(chat_id)
+    elif text == "/subscribe":
+        handle_subscribe(chat_id, user_id)
+    elif text.startswith("/admin"):
+        args = text[6:].strip()
+        handle_admin(chat_id, user_id, args)
 
 
 # ---- background scraper ----
@@ -139,7 +388,6 @@ def process_update(update):
 def scraper_loop():
     """Run copart scraper every SCRAPE_INTERVAL seconds."""
     log.info("Scraper thread started, interval=%ds", SCRAPE_INTERVAL)
-    # Wait 30 seconds before first run to let bot stabilize
     time.sleep(30)
     from copart_bot import run_scraper
     while True:
@@ -149,7 +397,6 @@ def scraper_loop():
             log.info("Scraper finished, posted %s lots", posted)
         except Exception as e:
             log.error("Scraper error: %s", e, exc_info=True)
-            # Notify in channel about errors
             try:
                 requests.post(API + "/sendMessage", json={
                     "chat_id": "@easyautoimport",
@@ -157,14 +404,19 @@ def scraper_loop():
                 }, timeout=10)
             except Exception:
                 pass
+        # Backup users after each scraper run
+        try:
+            users.backup_users()
+        except Exception:
+            pass
         time.sleep(SCRAPE_INTERVAL)
 
 
 # ---- calendar HTTP server ----
 
 CAL_PORT = int(os.environ.get("PORT", 8080))
-
 APP_HOST = "https://easyautoimport-production.up.railway.app"
+
 
 class CalHandler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -221,7 +473,6 @@ class CalHandler(BaseHTTPRequestHandler):
             self.wfile.write(b"Missing lot param")
             return
 
-        # Load lot from cache
         lot = {}
         try:
             cache_file = os.path.join(os.path.dirname(__file__) or ".", "lot_cache.json")
@@ -232,7 +483,6 @@ class CalHandler(BaseHTTPRequestHandler):
         except Exception:
             pass
 
-        # Build message text like in channel
         lines = ["Здравствуйте, меня интересует этот автомобиль!", ""]
         lines.append("🚗 %s" % lot.get("title", "Лот #%s" % lot_id))
         lines.append("")
@@ -265,7 +515,6 @@ class CalHandler(BaseHTTPRequestHandler):
         from urllib.parse import quote as url_quote
         tg_url = "https://t.me/+77476899519?text=%s" % url_quote(msg_text)
 
-        # Serve HTML page that redirects to Telegram
         html = (
             '<!DOCTYPE html><html><head><meta charset="utf-8">'
             '<meta name="viewport" content="width=device-width,initial-scale=1">'
@@ -300,13 +549,34 @@ def main():
     log.info("Polling bot started")
     log.info("=" * 50)
 
-    # Start HTTP server for .ics calendar links
+    # Restore users from backup if needed
+    users.restore_users()
+    # Migrate saved_lots.json → users.json
+    users.migrate_saved_lots()
+
+    # Start HTTP server
     http_thread = threading.Thread(target=start_http_server, daemon=True)
     http_thread.start()
 
-    # Start scraper in background thread
-    t = threading.Thread(target=scraper_loop, daemon=True)
-    t.start()
+    # Start scraper
+    scraper_thread = threading.Thread(target=scraper_loop, daemon=True)
+    scraper_thread.start()
+
+    # Start reminders
+    try:
+        from reminders import reminder_loop
+        reminder_thread = threading.Thread(target=reminder_loop, daemon=True)
+        reminder_thread.start()
+    except ImportError:
+        log.warning("reminders module not found, skipping")
+
+    # Start digest
+    try:
+        from digest import digest_loop
+        digest_thread = threading.Thread(target=digest_loop, daemon=True)
+        digest_thread.start()
+    except ImportError:
+        log.warning("digest module not found, skipping")
 
     offset = 0
     while True:

@@ -147,6 +147,7 @@ HEADERS = {
 
 
 BACKUP_CHAT_ID = os.environ.get("BACKUP_CHAT_ID", BOT_TOKEN.split(":")[0])
+LOT_CACHE_FILE = "lot_cache.json"
 
 
 def load_seen() -> dict:
@@ -514,6 +515,48 @@ def send_post(lot, channel_id):
     return resp.status_code == 200
 
 
+def cache_lot(lot, channel_id):
+    """Save full lot data to lot_cache.json for reminders and /calc."""
+    try:
+        cache = {}
+        if os.path.exists(LOT_CACHE_FILE):
+            with open(LOT_CACHE_FILE, "r", encoding="utf-8") as f:
+                cache = json.load(f)
+        cache[lot["id"]] = {
+            "title": lot.get("title"),
+            "make": lot.get("make"),
+            "model": lot.get("model"),
+            "price": lot.get("price"),
+            "damage": lot.get("damage"),
+            "odometer": lot.get("odometer"),
+            "engine": lot.get("engine"),
+            "drive": lot.get("drive"),
+            "fuel": lot.get("fuel"),
+            "color": lot.get("color"),
+            "vin": lot.get("vin"),
+            "url": lot.get("url"),
+            "auction_date": lot.get("auction_date"),
+            "channel_id": channel_id,
+            "cached_at": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S"),
+        }
+        # Prune entries older than 7 days
+        now = datetime.utcnow()
+        to_remove = []
+        for k, v in cache.items():
+            try:
+                dt = datetime.strptime(v.get("cached_at", ""), "%Y-%m-%dT%H:%M:%S")
+                if (now - dt).days > 7:
+                    to_remove.append(k)
+            except (ValueError, TypeError):
+                pass
+        for k in to_remove:
+            del cache[k]
+        with open(LOT_CACHE_FILE, "w", encoding="utf-8") as f:
+            json.dump(cache, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        log.warning("cache_lot error: %s", e)
+
+
 def run_scraper():
     """Fetch lots from Copart and post new ones to all channels."""
     log.info("=" * 50)
@@ -559,6 +602,7 @@ def run_scraper():
             if success:
                 seen[lot["id"]] = now.strftime("%Y-%m-%dT%H:%M:%S")
                 save_seen(seen)
+                cache_lot(lot, channel["id"])
                 posted += 1
                 log.info("Published OK (%d)", posted)
             else:
