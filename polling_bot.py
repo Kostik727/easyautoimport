@@ -662,6 +662,29 @@ def main():
     # Migrate saved_lots.json → users.json
     users.migrate_saved_lots()
 
+    # One-time: extend all existing users to 30 days from now
+    try:
+        from datetime import timedelta
+        from datetime import datetime as _dt
+        _all = users.load_users()
+        _now = _dt.utcnow()
+        _exp = (_now + timedelta(days=30)).strftime("%Y-%m-%dT%H:%M:%S")
+        _changed = False
+        for _uid, _u in _all.items():
+            if _uid.startswith("_"):
+                continue
+            sub = _u.get("subscription", {})
+            if sub.get("status") in ("trial", "expired"):
+                sub["expires_at"] = _exp
+                sub["status"] = "trial"
+                _changed = True
+                log.info("Extended user %s to %s", _uid, _exp)
+        if _changed:
+            users.save_users(_all)
+            log.info("All existing users extended to 30 days")
+    except Exception as e:
+        log.warning("Extend trial error: %s", e)
+
     # Start HTTP server
     http_thread = threading.Thread(target=start_http_server, daemon=True)
     http_thread.start()
