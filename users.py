@@ -15,7 +15,7 @@ log = logging.getLogger(__name__)
 
 USERS_FILE = "users.json"
 SAVED_FILE = "saved_lots.json"
-TRIAL_DAYS = 2
+TRIAL_DAYS = 30
 
 _lock = threading.Lock()
 
